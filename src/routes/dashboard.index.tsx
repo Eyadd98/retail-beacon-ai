@@ -3,7 +3,10 @@ import {
   Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer,
   Tooltip, XAxis, YAxis,
 } from "recharts";
-import { ArrowUpRight, Hash, Sparkles, UploadCloud, FileWarning, Filter } from "lucide-react";
+import {
+  ArrowUpRight, Hash, Sparkles, UploadCloud, FileWarning, Filter,
+  DollarSign, ShoppingCart, Users, Clock, Percent,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
