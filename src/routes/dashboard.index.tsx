@@ -20,6 +20,16 @@ import Papa from "papaparse";
 import { toast } from "sonner";
 import { useMemo, useRef, useState } from "react";
 
+function getKpiIcon(label: string) {
+  const lower = label.toLowerCase();
+  if (lower.includes("revenue") || lower.includes("sales") || lower.includes("price") || lower.includes("cost") || lower.includes("profit")) return DollarSign;
+  if (lower.includes("order") || lower.includes("cart") || lower.includes("qty")) return ShoppingCart;
+  if (lower.includes("customer") || lower.includes("user") || lower.includes("client") || lower.includes("people")) return Users;
+  if (lower.includes("time") || lower.includes("aht") || lower.includes("duration") || lower.includes("hours")) return Clock;
+  if (lower.includes("rate") || lower.includes("conversion") || lower.includes("%")) return Percent;
+  return Hash;
+}
+
 export const Route = createFileRoute("/dashboard/")({
   component: Overview,
 });
