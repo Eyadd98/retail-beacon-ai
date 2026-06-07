@@ -24,9 +24,9 @@ export const revenueByCategory = [
 
 export const kpis = [
   { label: "Total Revenue", value: "$892,420", delta: "+12.4%", positive: true },
-  { label: "Total Orders", value: "14,128", delta: "+8.1%", positive: true },
-  { label: "Average Order Value", value: "$63.18", delta: "+3.9%", positive: true },
-  { label: "Top Performing Region", value: "New York", delta: "32% share", positive: true },
+  { label: "Active Customers", value: "8,420", delta: "+6.2%", positive: true },
+  { label: "Conversion Rate", value: "4.8%", delta: "+0.6%", positive: true },
+  { label: "Growth", value: "+18.3%", delta: "vs last quarter", positive: true },
 ];
 
 export const insights = [
