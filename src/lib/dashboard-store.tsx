@@ -29,36 +29,53 @@ const parseDate = (v: unknown): Date | null => {
 
 export function inferSchema(rows: RawRow[]): Schema {
   if (!rows.length) return { headers: [], numeric: [], categorical: [], date: undefined };
-  const headers = Object.keys(rows[0]);
-  const sample = rows.slice(0, Math.min(rows.length, 200));
+
+  // Find the first row that actually has values to sample types from.
+  const firstValid =
+    rows.find((r) => r && Object.values(r).some((v) => v !== null && v !== undefined && String(v).trim() !== "")) ??
+    rows[0];
+  const headers = Object.keys(firstValid);
+
   const numeric: string[] = [];
   const categorical: string[] = [];
   let date: string | undefined;
 
+  const isDateString = (s: string) => {
+    const trimmed = s.trim();
+    if (!trimmed) return false;
+    // Require at least one date-like separator to avoid treating plain words as dates.
+    if (!/[\-\/:]/.test(trimmed) && !/^\d{4}$/.test(trimmed)) return false;
+    const d = new Date(trimmed);
+    return !isNaN(d.getTime());
+  };
+
   for (const h of headers) {
-    const values = sample.map((r) => r[h]).filter((v) => v != null && String(v).trim() !== "");
-    if (!values.length) continue;
-
-    const dateHits = values.filter((v) => parseDate(v)).length;
-    const numHits = values.filter((v) => parseNum(v) !== null).length;
-    const dateRatio = dateHits / values.length;
-    const numRatio = numHits / values.length;
-    const lower = h.toLowerCase();
-    const looksLikeDate = /date|time|day|month|year/.test(lower);
-
-    if (!date && dateRatio >= 0.8 && (looksLikeDate || numRatio < 0.8)) {
-      date = h;
-      continue;
+    // Find first non-empty value across rows for this column.
+    let sample: unknown = undefined;
+    for (const r of rows) {
+      const v = r?.[h];
+      if (v !== null && v !== undefined && String(v).trim() !== "") {
+        sample = v;
+        break;
+      }
     }
-    if (numRatio >= 0.8) {
+    if (sample === undefined) continue;
+
+    if (typeof sample === "number" && Number.isFinite(sample)) {
       numeric.push(h);
-      continue;
-    }
-    const unique = new Set(values.map((v) => String(v).trim()));
-    if (unique.size >= 2 && unique.size <= Math.max(20, Math.floor(values.length / 3))) {
+    } else if (typeof sample === "boolean") {
       categorical.push(h);
+    } else if (typeof sample === "string") {
+      if (!date && isDateString(sample)) {
+        date = h;
+      } else {
+        categorical.push(h);
+      }
+    } else if (sample instanceof Date) {
+      if (!date) date = h;
     }
   }
+
   return { headers, numeric, categorical, date };
 }
 
