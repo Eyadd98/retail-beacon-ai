@@ -2,6 +2,22 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { BarChart3, Sparkles, TrendingUp, Zap, ShieldCheck, ArrowRight } from "lucide-react";
+import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
+
+const revenueTrend = [
+  { month: "Jan", revenue: 42000 },
+  { month: "Feb", revenue: 48000 },
+  { month: "Mar", revenue: 55000 },
+  { month: "Apr", revenue: 51000 },
+  { month: "May", revenue: 63000 },
+  { month: "Jun", revenue: 70000 },
+  { month: "Jul", revenue: 78000 },
+  { month: "Aug", revenue: 82000 },
+  { month: "Sep", revenue: 91000 },
+  { month: "Oct", revenue: 99000 },
+  { month: "Nov", revenue: 110000 },
+  { month: "Dec", revenue: 124000 },
+];
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -87,7 +103,38 @@ function Index() {
                 ))}
               </div>
               <div className="px-6 pb-6">
-                <div className="h-48 rounded-lg bg-gradient-to-tr from-primary/10 via-primary/5 to-transparent" />
+                <div className="h-48 rounded-lg bg-gradient-to-tr from-primary/5 via-primary/0 to-transparent p-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={revenueTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="landingRev" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="oklch(0.55 0.2 260)" stopOpacity={0.45} />
+                          <stop offset="100%" stopColor="oklch(0.55 0.2 260)" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="month" hide />
+                      <Tooltip
+                        contentStyle={{
+                          borderRadius: 8,
+                          border: "1px solid oklch(0.92 0.01 255)",
+                          fontSize: 12,
+                          padding: "6px 10px",
+                        }}
+                        formatter={(v: number) => [`$${v.toLocaleString()}`, "Revenue"]}
+                        cursor={{ stroke: "oklch(0.55 0.2 260)", strokeOpacity: 0.2, strokeWidth: 1 }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="revenue"
+                        stroke="oklch(0.55 0.2 260)"
+                        strokeWidth={2.5}
+                        fill="url(#landingRev)"
+                        dot={false}
+                        activeDot={{ r: 4, strokeWidth: 2, stroke: "oklch(1 0 0)" }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
           </div>
