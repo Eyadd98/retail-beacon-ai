@@ -1,12 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
   Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer,
-  Tooltip, XAxis, YAxis,
+  Tooltip, XAxis, YAxis, PieChart, Pie, Cell, Legend,
 } from "recharts";
 import {
   ArrowUpRight, Hash, Sparkles, UploadCloud, FileWarning, Filter,
   DollarSign, ShoppingCart, Users, Clock, Percent,
+  TrendingUp, AlertTriangle, Lightbulb,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +31,27 @@ function getKpiIcon(label: string) {
   if (lower.includes("rate") || lower.includes("conversion") || lower.includes("%")) return Percent;
   return Hash;
 }
+
+const DONUT_COLORS = [
+  "oklch(0.65 0.22 260)",
+  "oklch(0.7 0.2 180)",
+  "oklch(0.72 0.2 60)",
+  "oklch(0.65 0.25 20)",
+  "oklch(0.6 0.22 320)",
+  "oklch(0.7 0.18 140)",
+  "oklch(0.62 0.2 220)",
+  "oklch(0.7 0.2 40)",
+  "oklch(0.6 0.22 290)",
+  "oklch(0.7 0.18 100)",
+  "oklch(0.65 0.2 350)",
+  "oklch(0.68 0.2 200)",
+];
+
+const INSIGHT_STYLES = {
+  success: { label: "Success", icon: TrendingUp, badge: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30", dot: "bg-emerald-500" },
+  warning: { label: "Warning", icon: AlertTriangle, badge: "bg-amber-500/15 text-amber-600 border-amber-500/30", dot: "bg-amber-500" },
+  idea:    { label: "Idea",    icon: Lightbulb,    badge: "bg-primary/15 text-primary border-primary/30",        dot: "bg-primary" },
+} as const;
 
 export const Route = createFileRoute("/dashboard/")({
   component: Overview,
