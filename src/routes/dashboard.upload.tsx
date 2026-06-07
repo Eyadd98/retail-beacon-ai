@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import Papa from "papaparse";
 import { toast } from "sonner";
-import { useDashboardData, type CsvRow } from "@/lib/dashboard-store";
+import { useDashboardData, inferSchema, type RawRow } from "@/lib/dashboard-store";
 
 export const Route = createFileRoute("/dashboard/upload")({
   component: UploadPage,
@@ -18,31 +18,22 @@ function UploadPage() {
   const [files, setFiles] = useState<FileState[]>([]);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { setRows } = useDashboardData();
+  const { setRawRows, setSchema } = useDashboardData();
 
   const parseCsv = (file: File) => {
-    Papa.parse<Record<string, string>>(file, {
+    Papa.parse<RawRow>(file, {
       header: true,
       skipEmptyLines: true,
+      dynamicTyping: false,
       complete: (result) => {
-        const parsed: CsvRow[] = result.data
-          .map((r) => {
-            const lower: Record<string, string> = {};
-            Object.keys(r).forEach((k) => (lower[k.trim().toLowerCase()] = String(r[k] ?? "").trim()));
-            return {
-              date: lower["date"] ?? "",
-              revenue: Number(String(lower["revenue"] ?? "0").replace(/[^0-9.-]/g, "")) || 0,
-              orders: Number(String(lower["orders"] ?? "0").replace(/[^0-9.-]/g, "")) || 0,
-              category: lower["category"] || "Uncategorized",
-            };
-          })
-          .filter((r) => r.date || r.revenue || r.orders);
-        if (!parsed.length) {
+        const raw = (result.data ?? []).filter((r) => r && Object.keys(r).length > 0);
+        if (!raw.length) {
           toast.error(`No valid rows in ${file.name}`);
           return;
         }
-        setRows(parsed);
-        toast.success(`Processed ${parsed.length} rows from ${file.name}`);
+        setRawRows(raw);
+        setSchema(inferSchema(raw));
+        toast.success(`Processed ${raw.length} rows from ${file.name}`);
       },
       error: () => toast.error(`Failed to parse ${file.name}`),
     });
