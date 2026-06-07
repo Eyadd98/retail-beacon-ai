@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Upload, FileBarChart, Settings, BarChart3, LogOut } from "lucide-react";
+import { LayoutDashboard, Upload, LineChart, Settings, BarChart3, LogOut } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -17,7 +17,7 @@ import {
 const items = [
   { title: "Overview", url: "/dashboard", icon: LayoutDashboard },
   { title: "Upload Data", url: "/dashboard/upload", icon: Upload },
-  { title: "Reports", url: "/dashboard/reports", icon: FileBarChart },
+  { title: "Analytics", url: "/dashboard/reports", icon: LineChart },
   { title: "Settings", url: "/dashboard/settings", icon: Settings },
 ];
 
