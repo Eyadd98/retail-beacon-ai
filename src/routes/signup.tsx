@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { AuthShell } from "@/components/auth-shell";
 
 export const Route = createFileRoute("/signup")({
-  head: () => ({ meta: [{ title: "Sign up — Retailyn" }] }),
+  head: () => ({ meta: [{ title: "Sign up — AI Data Analyst Dashboard" }] }),
   component: SignupPage,
 });
 
