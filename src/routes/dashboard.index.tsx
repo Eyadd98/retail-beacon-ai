@@ -20,6 +20,62 @@ import { toast } from "sonner";
 import { useMemo, useRef, useState } from "react";
 import { CustomChartCard, type ChartConfig, type ChartType } from "@/components/custom-chart-card";
 
+function uniqueCount(rows: RawRow[], col: string): number {
+  const set = new Set<string>();
+  for (const r of rows) {
+    const v = String(r[col] ?? "").trim();
+    if (v) set.add(v);
+    if (set.size > 50) break;
+  }
+  return set.size;
+}
+
+function pickPriorityNumeric(numeric: string[], keywords: string[], exclude: Set<string> = new Set()): string | undefined {
+  for (const kw of keywords) {
+    const hit = numeric.find((n) => !exclude.has(n) && n.toLowerCase().includes(kw));
+    if (hit) return hit;
+  }
+  return numeric.find((n) => !exclude.has(n));
+}
+
+function seedCharts(schema: import("@/lib/dashboard-store").Schema, rows: RawRow[]): ChartConfig[] {
+  const seeded: ChartConfig[] = [];
+  const usedY = new Set<string>();
+  const usedX = new Set<string>();
+
+  // 1. Line chart: date + priority numeric (revenue-like)
+  if (schema.date && schema.numeric.length) {
+    const y = pickPriorityNumeric(schema.numeric, ["revenue", "income", "sales", "profit", "amount"]);
+    if (y) {
+      seeded.push({ id: crypto.randomUUID(), type: "line", x: schema.date, y });
+      usedY.add(y);
+    }
+  }
+
+  // 2. Donut chart: low-cardinality categorical (<=7 unique values)
+  const lowCard = schema.categorical.find((c) => {
+    const u = uniqueCount(rows, c);
+    return u >= 2 && u <= 7;
+  });
+  if (lowCard && schema.numeric.length) {
+    const y = pickPriorityNumeric(schema.numeric, ["count", "amount", "total"], usedY) ?? schema.numeric[0];
+    seeded.push({ id: crypto.randomUUID(), type: "donut", x: lowCard, y });
+    usedX.add(lowCard);
+    usedY.add(y);
+  }
+
+  // 3. Bar chart: higher-cardinality categorical (>7) or any remaining
+  const highCard =
+    schema.categorical.find((c) => !usedX.has(c) && uniqueCount(rows, c) > 7) ??
+    schema.categorical.find((c) => !usedX.has(c));
+  if (highCard && schema.numeric.length) {
+    const y = pickPriorityNumeric(schema.numeric, ["revenue", "sales", "amount", "total"], usedY) ?? schema.numeric[0];
+    seeded.push({ id: crypto.randomUUID(), type: "bar", x: highCard, y });
+  }
+
+  return seeded;
+}
+
 function getKpiIcon(label: string) {
   const lower = label.toLowerCase();
   const has = (...keys: string[]) => keys.some((k) => lower.includes(k));
