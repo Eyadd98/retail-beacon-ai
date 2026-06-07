@@ -199,7 +199,7 @@ function Overview() {
       )}
 
       {rawRows && rawRows.length > 0 && (
-        <Card className="shadow-card">
+        <Card className="max-w-full overflow-hidden shadow-card">
           <CardHeader>
             <CardTitle className="text-base">Data Preview</CardTitle>
           </CardHeader>
@@ -207,7 +207,7 @@ function Overview() {
             <p className="mb-3 text-xs text-muted-foreground">
               Showing first {previewRows.length} of {rawRows.length} rows
             </p>
-            <div className="overflow-x-auto rounded-md border border-border">
+            <div className="w-full overflow-x-auto rounded-md border border-border">
               <Table>
                 <TableHeader>
                   <TableRow>
