@@ -71,19 +71,7 @@ function Overview() {
   // Auto-seed default charts the first time a schema becomes available.
   const schemaKey = schema ? schema.headers.join("|") : null;
   if (schema && schemaKey !== initializedFor) {
-    const seeded: ChartConfig[] = [];
-    const num = schema.numeric;
-    const cat = schema.categorical[0];
-    if (schema.date && num[0]) {
-      seeded.push({ id: crypto.randomUUID(), type: "line", x: schema.date, y: num[0] });
-    }
-    if (cat && num[0]) {
-      seeded.push({ id: crypto.randomUUID(), type: "bar", x: cat, y: num[0] });
-    }
-    if (cat && (num[1] ?? num[0])) {
-      seeded.push({ id: crypto.randomUUID(), type: "donut", x: cat, y: num[1] ?? num[0] });
-    }
-    setCharts(seeded);
+    setCharts(seedCharts(schema, rawRows ?? []));
     setInitializedFor(schemaKey);
   }
 
@@ -96,6 +84,16 @@ function Overview() {
     setCharts((cs) => cs.map((c) => (c.id === id ? next : c)));
   const removeChart = (id: string) =>
     setCharts((cs) => cs.filter((c) => c.id !== id));
+
+  const clearData = () => {
+    setRawRows(null);
+    setSchema(null);
+    resetFilters();
+    setCharts([]);
+    setInitializedFor(null);
+    if (inputRef.current) inputRef.current.value = "";
+    toast.success("Cleared all data");
+  };
 
   const handleFiles = (files: FileList | null) => {
     const file = files?.[0];
