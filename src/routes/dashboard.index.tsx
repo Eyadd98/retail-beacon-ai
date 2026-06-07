@@ -207,7 +207,7 @@ function Overview() {
             <p className="mb-3 text-xs text-muted-foreground">
               Showing first {previewRows.length} of {rawRows.length} rows
             </p>
-            <div className="relative w-full overflow-auto">
+            <div className="w-full max-w-full overflow-x-auto pb-4">
               <Table className="w-full caption-bottom">
                 <TableHeader>
                   <TableRow>
