@@ -1,70 +1,199 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 
-export type CsvRow = {
-  date: string;
-  revenue: number;
-  orders: number;
-  category: string;
-  region?: string;
-};
-
 export type RawRow = Record<string, string>;
 
-const COLUMN_ALIASES: Record<keyof CsvRow, string[]> = {
-  date: ["date", "day", "timestamp", "order date", "created", "created_at", "month"],
-  revenue: ["revenue", "sales", "total", "amount", "total sales", "gross", "income"],
-  orders: ["orders", "order count", "transactions", "quantity", "qty", "count", "units"],
-  category: ["category", "product category", "type", "segment", "product", "department"],
-  region: ["region", "country", "state", "location", "area", "market", "territory"],
+export type Schema = {
+  headers: string[];
+  numeric: string[];
+  categorical: string[];
+  date: string | undefined;
 };
 
-export function findColumn(headers: string[], key: keyof CsvRow): string | undefined {
-  const lowered = headers.map((h) => h.trim().toLowerCase());
-  for (const alias of COLUMN_ALIASES[key]) {
-    const idx = lowered.indexOf(alias);
-    if (idx !== -1) return headers[idx];
-    const partial = lowered.findIndex((h) => h.includes(alias));
-    if (partial !== -1) return headers[partial];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+const parseNum = (v: unknown): number | null => {
+  if (v == null) return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  const n = Number(s.replace(/[^0-9.\-]/g, ""));
+  return Number.isFinite(n) ? n : null;
+};
+
+const parseDate = (v: unknown): Date | null => {
+  if (v == null) return null;
+  const s = String(v).trim();
+  if (!s) return null;
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+};
+
+export function inferSchema(rows: RawRow[]): Schema {
+  if (!rows.length) return { headers: [], numeric: [], categorical: [], date: undefined };
+  const headers = Object.keys(rows[0]);
+  const sample = rows.slice(0, Math.min(rows.length, 200));
+  const numeric: string[] = [];
+  const categorical: string[] = [];
+  let date: string | undefined;
+
+  for (const h of headers) {
+    const values = sample.map((r) => r[h]).filter((v) => v != null && String(v).trim() !== "");
+    if (!values.length) continue;
+
+    const dateHits = values.filter((v) => parseDate(v)).length;
+    const numHits = values.filter((v) => parseNum(v) !== null).length;
+    const dateRatio = dateHits / values.length;
+    const numRatio = numHits / values.length;
+    const lower = h.toLowerCase();
+    const looksLikeDate = /date|time|day|month|year/.test(lower);
+
+    if (!date && dateRatio >= 0.8 && (looksLikeDate || numRatio < 0.8)) {
+      date = h;
+      continue;
+    }
+    if (numRatio >= 0.8) {
+      numeric.push(h);
+      continue;
+    }
+    const unique = new Set(values.map((v) => String(v).trim()));
+    if (unique.size >= 2 && unique.size <= Math.max(20, Math.floor(values.length / 3))) {
+      categorical.push(h);
+    }
   }
-  return undefined;
+  return { headers, numeric, categorical, date };
 }
 
-export function normalizeRows(raw: RawRow[]): CsvRow[] {
-  if (!raw.length) return [];
-  const headers = Object.keys(raw[0]);
-  const map = {
-    date: findColumn(headers, "date"),
-    revenue: findColumn(headers, "revenue"),
-    orders: findColumn(headers, "orders"),
-    category: findColumn(headers, "category"),
-    region: findColumn(headers, "region"),
+export type Filters = Record<string, string>;
+
+export function applyFilters(rows: RawRow[], filters: Filters): RawRow[] {
+  const active = Object.entries(filters).filter(([, v]) => v && v !== "__all__");
+  if (!active.length) return rows;
+  return rows.filter((r) => active.every(([k, v]) => String(r[k] ?? "").trim() === v));
+}
+
+export function uniqueValues(rows: RawRow[], col: string): string[] {
+  const set = new Set<string>();
+  for (const r of rows) {
+    const v = String(r[col] ?? "").trim();
+    if (v) set.add(v);
+  }
+  return Array.from(set).sort();
+}
+
+const fmtNum = (n: number) =>
+  Math.abs(n) >= 1000
+    ? n.toLocaleString(undefined, { maximumFractionDigits: 0 })
+    : n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+
+export type Kpi = { label: string; value: string; delta: string; positive: boolean };
+
+export function deriveMetrics(rows: RawRow[], schema: Schema) {
+  const kpiCols = schema.numeric.slice(0, 4);
+  const kpis: Kpi[] = kpiCols.map((col) => {
+    const nums = rows.map((r) => parseNum(r[col])).filter((n): n is number => n !== null);
+    const sum = nums.reduce((s, n) => s + n, 0);
+    const avg = nums.length ? sum / nums.length : 0;
+    const useAvg = /rate|ratio|pct|percent|avg|average|aht|score/i.test(col);
+    return {
+      label: col,
+      value: useAvg ? `${fmtNum(avg)} avg` : fmtNum(sum),
+      delta: useAvg ? `total ${fmtNum(sum)}` : `${nums.length} values`,
+      positive: true,
+    };
+  });
+
+  const lineYCol = schema.numeric[0];
+  let lineChart: { x: string; y: number; key: number }[] = [];
+  if (schema.date && lineYCol) {
+    const byDay = new Map<string, { x: string; y: number; key: number }>();
+    for (const r of rows) {
+      const d = parseDate(r[schema.date]);
+      const n = parseNum(r[lineYCol]);
+      if (!d || n === null) continue;
+      const iso = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      const label = `${MONTHS[d.getMonth()]} ${String(d.getDate()).padStart(2, "0")}`;
+      const cur = byDay.get(iso) ?? { x: label, y: 0, key: d.getTime() };
+      cur.y += n;
+      byDay.set(iso, cur);
+    }
+    lineChart = Array.from(byDay.values()).sort((a, b) => a.key - b.key);
+  }
+
+  const barXCol = schema.categorical[0];
+  const barYCol = schema.numeric[0];
+  let barChart: { x: string; y: number }[] = [];
+  if (barXCol && barYCol) {
+    const byCat = new Map<string, number>();
+    for (const r of rows) {
+      const k = String(r[barXCol] ?? "").trim() || "—";
+      const n = parseNum(r[barYCol]);
+      if (n === null) continue;
+      byCat.set(k, (byCat.get(k) ?? 0) + n);
+    }
+    barChart = Array.from(byCat.entries())
+      .map(([x, y]) => ({ x, y }))
+      .sort((a, b) => b.y - a.y)
+      .slice(0, 12);
+  }
+
+  const insights: string[] = [];
+  if (kpis[0]) insights.push(`${kpis[0].label} totals ${fmtNum(rows.map((r) => parseNum(r[kpiCols[0]]) ?? 0).reduce((s, n) => s + n, 0))} across ${rows.length} rows.`);
+  if (barChart.length) {
+    const total = barChart.reduce((s, b) => s + b.y, 0);
+    const top = barChart[0];
+    const pct = total ? Math.round((top.y / total) * 100) : 0;
+    insights.push(`${top.x} leads ${barXCol} by ${barYCol}, contributing ${pct}% of the total.`);
+  }
+  if (lineChart.length >= 2) {
+    const first = lineChart[0].y;
+    const last = lineChart[lineChart.length - 1].y;
+    const change = first ? Math.round(((last - first) / first) * 100) : 0;
+    insights.push(`${lineYCol} ${change >= 0 ? "rose" : "fell"} ${Math.abs(change)}% from ${lineChart[0].x} to ${lineChart[lineChart.length - 1].x}.`);
+  }
+  while (insights.length < 3) {
+    insights.push("Upload richer data (dates, categories, numerics) to surface more insights.");
+  }
+
+  return {
+    kpis,
+    lineChart,
+    lineYCol,
+    lineXCol: schema.date,
+    barChart,
+    barXCol,
+    barYCol,
+    insights: insights.slice(0, 3),
   };
-  const num = (v: unknown) =>
-    Number(String(v ?? "0").replace(/[^0-9.-]/g, "")) || 0;
-  return raw
-    .map((r) => ({
-      date: map.date ? String(r[map.date] ?? "").trim() : "",
-      revenue: map.revenue ? num(r[map.revenue]) : 0,
-      orders: map.orders ? num(r[map.orders]) : 0,
-      category: map.category ? String(r[map.category] ?? "").trim() || "Uncategorized" : "Uncategorized",
-      region: map.region ? String(r[map.region] ?? "").trim() || undefined : undefined,
-    }))
-    .filter((r) => r.date || r.revenue || r.orders);
 }
 
 type DashboardContextValue = {
-  rows: CsvRow[] | null;
-  setRows: (rows: CsvRow[] | null) => void;
   rawRows: RawRow[] | null;
   setRawRows: (rows: RawRow[] | null) => void;
+  schema: Schema | null;
+  setSchema: (s: Schema | null) => void;
+  filters: Filters;
+  setFilter: (col: string, value: string) => void;
+  resetFilters: () => void;
 };
 
 const DashboardContext = createContext<DashboardContextValue | undefined>(undefined);
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
-  const [rows, setRows] = useState<CsvRow[] | null>(null);
-  const [rawRows, setRawRows] = useState<RawRow[] | null>(null);
-  const value = useMemo(() => ({ rows, setRows, rawRows, setRawRows }), [rows, rawRows]);
+  const [rawRows, setRawRowsState] = useState<RawRow[] | null>(null);
+  const [schema, setSchema] = useState<Schema | null>(null);
+  const [filters, setFilters] = useState<Filters>({});
+
+  const setRawRows = (rows: RawRow[] | null) => {
+    setRawRowsState(rows);
+    setFilters({});
+  };
+  const setFilter = (col: string, value: string) =>
+    setFilters((f) => ({ ...f, [col]: value }));
+  const resetFilters = () => setFilters({});
+
+  const value = useMemo(
+    () => ({ rawRows, setRawRows, schema, setSchema, filters, setFilter, resetFilters }),
+    [rawRows, schema, filters],
+  );
   return <DashboardContext.Provider value={value}>{children}</DashboardContext.Provider>;
 }
 
@@ -72,69 +201,4 @@ export function useDashboardData() {
   const ctx = useContext(DashboardContext);
   if (!ctx) throw new Error("useDashboardData must be used within DashboardProvider");
   return ctx;
-}
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-export function deriveMetrics(rows: CsvRow[]) {
-  const totalRevenue = rows.reduce((s, r) => s + r.revenue, 0);
-  const totalOrders = rows.reduce((s, r) => s + r.orders, 0);
-  const aov = totalOrders ? totalRevenue / totalOrders : 0;
-  const categories = new Set(rows.map((r) => r.category)).size;
-
-  const byDay = new Map<string, { revenue: number; orders: number; key: number; label: string }>();
-  rows.forEach((r) => {
-    const d = new Date(r.date);
-    if (isNaN(d.getTime())) return;
-    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    const label = `${MONTHS[d.getMonth()]} ${String(d.getDate()).padStart(2, "0")}`;
-    const cur = byDay.get(iso) ?? { revenue: 0, orders: 0, key: d.getTime(), label };
-    cur.revenue += r.revenue;
-    cur.orders += r.orders;
-    byDay.set(iso, cur);
-  });
-  const salesOverTime = Array.from(byDay.values())
-    .sort((a, b) => a.key - b.key)
-    .map((v) => ({ date: v.label, revenue: v.revenue, orders: v.orders }));
-
-  const byCat = new Map<string, number>();
-  rows.forEach((r) => byCat.set(r.category, (byCat.get(r.category) ?? 0) + r.revenue));
-  const revenueByCategory = Array.from(byCat.entries())
-    .map(([category, revenue]) => ({ category, revenue }))
-    .sort((a, b) => b.revenue - a.revenue);
-
-  const byRegion = new Map<string, number>();
-  rows.forEach((r) => {
-    if (!r.region) return;
-    byRegion.set(r.region, (byRegion.get(r.region) ?? 0) + r.revenue);
-  });
-  const revenueByRegion = Array.from(byRegion.entries())
-    .map(([region, revenue]) => ({ region, revenue }))
-    .sort((a, b) => b.revenue - a.revenue);
-
-  const fmtCurrency = (n: number) =>
-    `$${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-
-  const kpis = [
-    { label: "Total Revenue", value: fmtCurrency(totalRevenue), delta: `${rows.length} rows`, positive: true },
-    { label: "Total Orders", value: totalOrders.toLocaleString(), delta: `${categories} categories`, positive: true },
-    { label: "Avg Order Value", value: fmtCurrency(aov), delta: "per order", positive: true },
-    { label: "Top Category", value: revenueByCategory[0]?.category ?? "—", delta: fmtCurrency(revenueByCategory[0]?.revenue ?? 0), positive: true },
-  ];
-
-  const top = revenueByCategory[0];
-  const topPct = top && totalRevenue ? Math.round((top.revenue / totalRevenue) * 100) : 0;
-  const topRegion = revenueByRegion[0];
-
-  const insights = [
-    `Total revenue reached ${fmtCurrency(totalRevenue)} across ${totalOrders.toLocaleString()} total orders.`,
-    top
-      ? `${top.category} is driving performance, making up ${topPct}% of total revenue.`
-      : `No category data available to highlight a leader.`,
-    topRegion
-      ? `The highest performing region was ${topRegion.region} with ${fmtCurrency(topRegion.revenue)} in sales.`
-      : `Add a "Region" column to your CSV to surface regional performance.`,
-  ];
-
-  return { kpis, salesOverTime, revenueByCategory, revenueByRegion, insights };
 }
