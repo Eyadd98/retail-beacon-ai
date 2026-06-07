@@ -31,16 +31,12 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="AI Data Analyst Dashboard">
-              <Link to="/">
-                <BarChart3 className="h-4 w-4" />
-                <span className="font-semibold tracking-tight">AI Data Analyst Dashboard</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <Link to="/" className="flex items-center justify-center gap-2 px-2 py-1.5">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-primary shadow-elegant">
+            <BarChart3 className="h-4 w-4 text-primary-foreground" />
+          </div>
+          {!collapsed && <span className="text-base font-semibold tracking-tight">AI Data Analyst Dashboard</span>}
+        </Link>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
