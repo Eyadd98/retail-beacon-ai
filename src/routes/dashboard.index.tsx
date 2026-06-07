@@ -3,7 +3,10 @@ import {
   Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer,
   Tooltip, XAxis, YAxis,
 } from "recharts";
-import { ArrowUpRight, Hash, Sparkles, UploadCloud, FileWarning, Filter } from "lucide-react";
+import {
+  ArrowUpRight, Hash, Sparkles, UploadCloud, FileWarning, Filter,
+  DollarSign, ShoppingCart, Users, Clock, Percent,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +19,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import Papa from "papaparse";
 import { toast } from "sonner";
 import { useMemo, useRef, useState } from "react";
+
+function getKpiIcon(label: string) {
+  const lower = label.toLowerCase();
+  if (lower.includes("revenue") || lower.includes("sales") || lower.includes("price") || lower.includes("cost") || lower.includes("profit")) return DollarSign;
+  if (lower.includes("order") || lower.includes("cart") || lower.includes("qty")) return ShoppingCart;
+  if (lower.includes("customer") || lower.includes("user") || lower.includes("client") || lower.includes("people")) return Users;
+  if (lower.includes("time") || lower.includes("aht") || lower.includes("duration") || lower.includes("hours")) return Clock;
+  if (lower.includes("rate") || lower.includes("conversion") || lower.includes("%")) return Percent;
+  return Hash;
+}
 
 export const Route = createFileRoute("/dashboard/")({
   component: Overview,
@@ -186,13 +199,14 @@ function Overview() {
           ? metrics.kpis
           : [0, 1, 2, 3].map((i) => ({ label: `Metric ${i + 1}`, value: "—", delta: "No data" }))
         ).map((k) => {
+          const Icon = getKpiIcon(k.label);
           return (
             <Card key={k.label} className="shadow-card transition hover:shadow-elegant">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
                   <span className="truncate text-xs font-medium uppercase tracking-wide text-muted-foreground">{k.label}</span>
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent">
-                    <Hash className="h-4 w-4 text-primary" />
+                    <Icon className="h-4 w-4 text-primary" />
                   </div>
                 </div>
                 <div className="mt-3 text-2xl font-semibold">{k.value}</div>
