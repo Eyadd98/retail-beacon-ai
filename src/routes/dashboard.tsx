@@ -28,7 +28,7 @@ function DashboardLayout() {
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
-        <div className="flex flex-1 flex-col">
+        <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
           <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur-xl">
             <SidebarTrigger />
             <div className="relative ml-2 hidden max-w-sm flex-1 md:block">
@@ -70,7 +70,7 @@ function DashboardLayout() {
               </Avatar>
             </div>
           </header>
-          <main className="flex-1 min-w-0 overflow-x-hidden p-4 md:p-6 lg:p-8">
+          <main className="flex-1 overflow-y-auto overflow-x-hidden min-w-0 p-4 md:p-6 lg:p-8">
             <Outlet />
           </main>
         </div>

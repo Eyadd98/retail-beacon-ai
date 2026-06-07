@@ -128,7 +128,7 @@ function Overview() {
   const previewRows = rawRows ? rawRows.slice(0, 5) : [];
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in min-w-0 w-full max-w-full">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
         <p className="text-sm text-muted-foreground">
@@ -199,7 +199,7 @@ function Overview() {
       )}
 
       {rawRows && rawRows.length > 0 && (
-        <Card className="w-full min-w-0 overflow-hidden shadow-card">
+        <Card className="shadow-card w-full min-w-0 overflow-hidden">
           <CardHeader>
             <CardTitle className="text-base">Data Preview</CardTitle>
           </CardHeader>
@@ -207,26 +207,24 @@ function Overview() {
             <p className="mb-3 text-xs text-muted-foreground">
               Showing first {previewRows.length} of {rawRows.length} rows
             </p>
-            <div className="w-full max-w-full overflow-x-auto pb-4">
-              <Table className="w-full caption-bottom">
-                <TableHeader>
-                  <TableRow>
+            <Table className="w-full caption-bottom">
+              <TableHeader>
+                <TableRow>
+                  {previewHeaders.map((h) => (
+                    <TableHead key={h} className="whitespace-nowrap">{h}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {previewRows.map((r, i) => (
+                  <TableRow key={i}>
                     {previewHeaders.map((h) => (
-                      <TableHead key={h} className="whitespace-nowrap">{h}</TableHead>
+                      <TableCell key={h} className="whitespace-nowrap">{String(r[h] ?? "")}</TableCell>
                     ))}
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {previewRows.map((r, i) => (
-                    <TableRow key={i}>
-                      {previewHeaders.map((h) => (
-                        <TableCell key={h} className="whitespace-nowrap">{String(r[h] ?? "")}</TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       )}
