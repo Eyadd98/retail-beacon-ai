@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
-  ArrowUpRight, Hash, Sparkles, UploadCloud, FileWarning, Filter, Plus,
+  ArrowUpRight, Sparkles, UploadCloud, FileWarning, Filter, Plus,
   DollarSign, ShoppingCart, Users, Clock, Percent,
   TrendingUp, AlertTriangle, Lightbulb,
+  Briefcase, MapPin, GraduationCap, HeartPulse, Calendar, Star, Activity, Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,16 +18,79 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import Papa from "papaparse";
 import { toast } from "sonner";
 import { useMemo, useRef, useState } from "react";
-import { CustomChartCard, type ChartConfig, type ChartType } from "@/components/custom-chart-card";
+import { CustomChartCard, type ChartConfig } from "@/components/custom-chart-card";
+
+function uniqueCount(rows: RawRow[], col: string): number {
+  const set = new Set<string>();
+  for (const r of rows) {
+    const v = String(r[col] ?? "").trim();
+    if (v) set.add(v);
+    if (set.size > 50) break;
+  }
+  return set.size;
+}
+
+function pickPriorityNumeric(numeric: string[], keywords: string[], exclude: Set<string> = new Set()): string | undefined {
+  for (const kw of keywords) {
+    const hit = numeric.find((n) => !exclude.has(n) && n.toLowerCase().includes(kw));
+    if (hit) return hit;
+  }
+  return numeric.find((n) => !exclude.has(n));
+}
+
+function seedCharts(schema: import("@/lib/dashboard-store").Schema, rows: RawRow[]): ChartConfig[] {
+  const seeded: ChartConfig[] = [];
+  const usedY = new Set<string>();
+  const usedX = new Set<string>();
+
+  // 1. Line chart: date + priority numeric (revenue-like)
+  if (schema.date && schema.numeric.length) {
+    const y = pickPriorityNumeric(schema.numeric, ["revenue", "income", "sales", "profit", "amount"]);
+    if (y) {
+      seeded.push({ id: crypto.randomUUID(), type: "line", x: schema.date, y });
+      usedY.add(y);
+    }
+  }
+
+  // 2. Donut chart: low-cardinality categorical (<=7 unique values)
+  const lowCard = schema.categorical.find((c) => {
+    const u = uniqueCount(rows, c);
+    return u >= 2 && u <= 7;
+  });
+  if (lowCard && schema.numeric.length) {
+    const y = pickPriorityNumeric(schema.numeric, ["count", "amount", "total"], usedY) ?? schema.numeric[0];
+    seeded.push({ id: crypto.randomUUID(), type: "donut", x: lowCard, y });
+    usedX.add(lowCard);
+    usedY.add(y);
+  }
+
+  // 3. Bar chart: higher-cardinality categorical (>7) or any remaining
+  const highCard =
+    schema.categorical.find((c) => !usedX.has(c) && uniqueCount(rows, c) > 7) ??
+    schema.categorical.find((c) => !usedX.has(c));
+  if (highCard && schema.numeric.length) {
+    const y = pickPriorityNumeric(schema.numeric, ["revenue", "sales", "amount", "total"], usedY) ?? schema.numeric[0];
+    seeded.push({ id: crypto.randomUUID(), type: "bar", x: highCard, y });
+  }
+
+  return seeded;
+}
 
 function getKpiIcon(label: string) {
   const lower = label.toLowerCase();
-  if (lower.includes("revenue") || lower.includes("sales") || lower.includes("price") || lower.includes("cost") || lower.includes("profit")) return DollarSign;
-  if (lower.includes("order") || lower.includes("cart") || lower.includes("qty")) return ShoppingCart;
-  if (lower.includes("customer") || lower.includes("user") || lower.includes("client") || lower.includes("people")) return Users;
-  if (lower.includes("time") || lower.includes("aht") || lower.includes("duration") || lower.includes("hours")) return Clock;
-  if (lower.includes("rate") || lower.includes("conversion") || lower.includes("%")) return Percent;
-  return Hash;
+  const has = (...keys: string[]) => keys.some((k) => lower.includes(k));
+  if (has("job", "role", "department", "work")) return Briefcase;
+  if (has("distance", "location", "region", "city")) return MapPin;
+  if (has("education", "degree", "study")) return GraduationCap;
+  if (has("satisfaction", "environment", "wellness", "health")) return HeartPulse;
+  if (has("age", "years", "tenure")) return Calendar;
+  if (has("rating", "score", "performance", "qa")) return Star;
+  if (has("revenue", "sales", "price", "income", "salary", "cost", "profit")) return DollarSign;
+  if (has("order", "cart", "qty")) return ShoppingCart;
+  if (has("customer", "user", "employee", "people", "client")) return Users;
+  if (has("time", "aht", "duration", "hours")) return Clock;
+  if (has("rate", "conversion", "%")) return Percent;
+  return Activity;
 }
 
 const INSIGHT_STYLES = {
@@ -63,19 +127,7 @@ function Overview() {
   // Auto-seed default charts the first time a schema becomes available.
   const schemaKey = schema ? schema.headers.join("|") : null;
   if (schema && schemaKey !== initializedFor) {
-    const seeded: ChartConfig[] = [];
-    const num = schema.numeric;
-    const cat = schema.categorical[0];
-    if (schema.date && num[0]) {
-      seeded.push({ id: crypto.randomUUID(), type: "line", x: schema.date, y: num[0] });
-    }
-    if (cat && num[0]) {
-      seeded.push({ id: crypto.randomUUID(), type: "bar", x: cat, y: num[0] });
-    }
-    if (cat && (num[1] ?? num[0])) {
-      seeded.push({ id: crypto.randomUUID(), type: "donut", x: cat, y: num[1] ?? num[0] });
-    }
-    setCharts(seeded);
+    setCharts(seedCharts(schema, rawRows ?? []));
     setInitializedFor(schemaKey);
   }
 
@@ -88,6 +140,16 @@ function Overview() {
     setCharts((cs) => cs.map((c) => (c.id === id ? next : c)));
   const removeChart = (id: string) =>
     setCharts((cs) => cs.filter((c) => c.id !== id));
+
+  const clearData = () => {
+    setRawRows(null);
+    setSchema(null);
+    resetFilters();
+    setCharts([]);
+    setInitializedFor(null);
+    if (inputRef.current) inputRef.current.value = "";
+    toast.success("Cleared all data");
+  };
 
   const handleFiles = (files: FileList | null) => {
     const file = files?.[0];
@@ -129,13 +191,20 @@ function Overview() {
 
   return (
     <div className="space-y-6 animate-fade-in min-w-0 w-full max-w-full">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
-        <p className="text-sm text-muted-foreground">
-          {hasData
-            ? `Auto-detected ${schema?.numeric.length ?? 0} numeric, ${schema?.categorical.length ?? 0} categorical, ${schema?.date ? 1 : 0} date columns from your data.`
-            : "Upload any CSV — the dashboard adapts to your columns automatically."}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
+          <p className="text-sm text-muted-foreground">
+            {hasData
+              ? `Auto-detected ${schema?.numeric.length ?? 0} numeric, ${schema?.categorical.length ?? 0} categorical, ${schema?.date ? 1 : 0} date columns from your data.`
+              : "Upload any CSV — the dashboard adapts to your columns automatically."}
+          </p>
+        </div>
+        {hasData && (
+          <Button variant="outline" size="sm" onClick={clearData} className="text-destructive hover:text-destructive">
+            <Trash2 className="h-4 w-4" /> Clear Data
+          </Button>
+        )}
       </div>
 
       <div

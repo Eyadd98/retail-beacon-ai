@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { DashboardProvider } from "@/lib/dashboard-store";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — AI Data Analyst Dashboard" }] }),
@@ -36,6 +37,7 @@ function DashboardLayout() {
               <Input placeholder="Search reports, regions, SKUs…" className="pl-9" />
             </div>
             <div className="ml-auto flex items-center gap-3">
+              <ThemeToggle />
               <Popover>
                 <PopoverTrigger asChild>
                   <Button

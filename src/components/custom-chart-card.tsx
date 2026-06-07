@@ -176,16 +176,26 @@ export function CustomChartCard({
 }
 
 function renderChart(type: ChartType, data: { x: string; y: number }[], yName: string) {
-  const grid = <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 255)" vertical={false} />;
-  const xAxis = <XAxis dataKey="x" stroke="oklch(0.5 0.02 260)" fontSize={11} tickLine={false} axisLine={false} minTickGap={24} />;
-  const yAxis = <YAxis stroke="oklch(0.5 0.02 260)" fontSize={12} tickLine={false} axisLine={false} />;
-  const tooltip = <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid oklch(0.92 0.01 255)", fontSize: 12 }} formatter={(v: number) => v.toLocaleString()} />;
+  const gridStroke = "var(--border)";
+  const axisStroke = "var(--muted-foreground)";
+  const accent = "var(--primary)";
+  const tooltipStyle = {
+    borderRadius: 8,
+    border: "1px solid var(--border)",
+    background: "var(--popover)",
+    color: "var(--popover-foreground)",
+    fontSize: 12,
+  } as const;
+  const grid = <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} vertical={false} />;
+  const xAxis = <XAxis dataKey="x" stroke={axisStroke} fontSize={11} tickLine={false} axisLine={false} minTickGap={24} />;
+  const yAxis = <YAxis stroke={axisStroke} fontSize={12} tickLine={false} axisLine={false} />;
+  const tooltip = <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "var(--accent)", opacity: 0.4 }} formatter={(v: number) => v.toLocaleString()} />;
 
   if (type === "line") {
     return (
       <LineChart data={data} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
         {grid}{xAxis}{yAxis}{tooltip}
-        <Line type="monotone" dataKey="y" name={yName} stroke="oklch(0.55 0.2 260)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} isAnimationActive animationDuration={500} />
+        <Line type="monotone" dataKey="y" name={yName} stroke={accent} strokeWidth={2} dot={false} activeDot={{ r: 4 }} isAnimationActive animationDuration={500} />
       </LineChart>
     );
   }
@@ -194,12 +204,12 @@ function renderChart(type: ChartType, data: { x: string; y: number }[], yName: s
       <AreaChart data={data} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
         <defs>
           <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="oklch(0.55 0.2 260)" stopOpacity={0.45} />
-            <stop offset="100%" stopColor="oklch(0.55 0.2 260)" stopOpacity={0.02} />
+            <stop offset="0%" stopColor="var(--primary)" stopOpacity={0.45} />
+            <stop offset="100%" stopColor="var(--primary)" stopOpacity={0.02} />
           </linearGradient>
         </defs>
         {grid}{xAxis}{yAxis}{tooltip}
-        <Area type="monotone" dataKey="y" name={yName} stroke="oklch(0.55 0.2 260)" strokeWidth={2} fill="url(#areaFill)" isAnimationActive animationDuration={500} />
+        <Area type="monotone" dataKey="y" name={yName} stroke={accent} strokeWidth={2} fill="url(#areaFill)" isAnimationActive animationDuration={500} />
       </AreaChart>
     );
   }
@@ -207,7 +217,7 @@ function renderChart(type: ChartType, data: { x: string; y: number }[], yName: s
     return (
       <BarChart data={data}>
         {grid}{xAxis}{yAxis}{tooltip}
-        <Bar dataKey="y" name={yName} fill="oklch(0.55 0.2 260)" radius={[6, 6, 0, 0]} isAnimationActive animationDuration={500} />
+        <Bar dataKey="y" name={yName} fill={accent} radius={[6, 6, 0, 0]} isAnimationActive animationDuration={500} />
       </BarChart>
     );
   }
@@ -215,9 +225,9 @@ function renderChart(type: ChartType, data: { x: string; y: number }[], yName: s
   const donutData = data.map((d) => ({ name: d.x, value: d.y }));
   return (
     <PieChart>
-      <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid oklch(0.92 0.01 255)", fontSize: 12 }} formatter={(v: number, n: string) => [v.toLocaleString(), n]} />
+      <Tooltip contentStyle={tooltipStyle} formatter={(v: number, n: string) => [v.toLocaleString(), n]} />
       <Legend verticalAlign="middle" align="right" layout="vertical" iconType="circle" wrapperStyle={{ fontSize: 12, paddingLeft: 16 }} />
-      <Pie data={donutData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={95} paddingAngle={2} stroke="oklch(1 0 0)" strokeWidth={2} isAnimationActive animationDuration={500}>
+      <Pie data={donutData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={95} paddingAngle={2} stroke="var(--card)" strokeWidth={2} isAnimationActive animationDuration={500}>
         {donutData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
       </Pie>
     </PieChart>
