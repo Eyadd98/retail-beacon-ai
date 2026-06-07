@@ -191,13 +191,20 @@ function Overview() {
 
   return (
     <div className="space-y-6 animate-fade-in min-w-0 w-full max-w-full">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
-        <p className="text-sm text-muted-foreground">
-          {hasData
-            ? `Auto-detected ${schema?.numeric.length ?? 0} numeric, ${schema?.categorical.length ?? 0} categorical, ${schema?.date ? 1 : 0} date columns from your data.`
-            : "Upload any CSV — the dashboard adapts to your columns automatically."}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
+          <p className="text-sm text-muted-foreground">
+            {hasData
+              ? `Auto-detected ${schema?.numeric.length ?? 0} numeric, ${schema?.categorical.length ?? 0} categorical, ${schema?.date ? 1 : 0} date columns from your data.`
+              : "Upload any CSV — the dashboard adapts to your columns automatically."}
+          </p>
+        </div>
+        {hasData && (
+          <Button variant="outline" size="sm" onClick={clearData} className="text-destructive hover:text-destructive">
+            <Trash2 className="h-4 w-4" /> Clear Data
+          </Button>
+        )}
       </div>
 
       <div
