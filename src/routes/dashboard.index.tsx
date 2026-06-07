@@ -298,134 +298,25 @@ function Overview() {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-5">
-        <Card className="lg:col-span-3 shadow-card">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
-            <CardTitle className="text-base">
-              {hasData && metrics!.lineXCol && metrics!.lineYCol
-                ? `${metrics!.lineYCol} over ${metrics!.lineXCol}`
-                : "Trend Over Time"}
-            </CardTitle>
-            {numericCols.length > 0 && (
-              <Select value={metrics?.lineYCol ?? numericCols[0]} onValueChange={setLineY}>
-                <SelectTrigger className="h-8 w-[160px] text-xs">
-                  <SelectValue placeholder="Metric" />
-                </SelectTrigger>
-                <SelectContent>
-                  {numericCols.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </CardHeader>
-          <CardContent className="h-72">
-            {hasData && metrics!.lineChart.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={metrics!.lineChart} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 255)" vertical={false} />
-                <XAxis dataKey="x" stroke="oklch(0.5 0.02 260)" fontSize={12} tickLine={false} axisLine={false} minTickGap={24} />
-                <YAxis stroke="oklch(0.5 0.02 260)" fontSize={12} tickLine={false} axisLine={false} />
-                <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid oklch(0.92 0.01 255)", fontSize: 12 }} formatter={(v: number) => v.toLocaleString()} />
-                <Line type="monotone" dataKey="y" name={metrics!.lineYCol} stroke="oklch(0.55 0.2 260)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} isAnimationActive animationDuration={500} />
-              </LineChart>
-            </ResponsiveContainer>
-            ) : (
-              <EmptyChart message={hasData ? "No date column detected — line chart unavailable." : undefined} />
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-2 shadow-card">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
-            <CardTitle className="text-base">
-              {hasData && metrics!.barXCol && metrics!.barYCol
-                ? `${metrics!.barYCol} by ${metrics!.barXCol}`
-                : "Breakdown by Category"}
-            </CardTitle>
-            {numericCols.length > 0 && (
-              <Select value={metrics?.barYCol ?? numericCols[0]} onValueChange={setBarY}>
-                <SelectTrigger className="h-8 w-[160px] text-xs">
-                  <SelectValue placeholder="Metric" />
-                </SelectTrigger>
-                <SelectContent>
-                  {numericCols.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </CardHeader>
-          <CardContent className="h-72">
-            {hasData && metrics!.barChart.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={metrics!.barChart}>
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 255)" vertical={false} />
-                <XAxis dataKey="x" stroke="oklch(0.5 0.02 260)" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis stroke="oklch(0.5 0.02 260)" fontSize={12} tickLine={false} axisLine={false} />
-                <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid oklch(0.92 0.01 255)", fontSize: 12 }} formatter={(v: number) => v.toLocaleString()} />
-                <Bar dataKey="y" name={metrics!.barYCol} fill="oklch(0.55 0.2 260)" radius={[6, 6, 0, 0]} isAnimationActive animationDuration={500} />
-              </BarChart>
-            </ResponsiveContainer>
-            ) : (
-              <EmptyChart message={hasData ? "No categorical column detected — bar chart unavailable." : undefined} />
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="shadow-card">
-        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
-          <CardTitle className="text-base">
-            {hasData && metrics!.barXCol && metrics!.barYCol
-              ? `Distribution of ${metrics!.barYCol} by ${metrics!.barXCol}`
-              : "Distribution"}
-          </CardTitle>
-          {numericCols.length > 0 && (
-            <Select value={metrics?.barYCol ?? numericCols[0]} onValueChange={setBarY}>
-              <SelectTrigger className="h-8 w-[160px] text-xs">
-                <SelectValue placeholder="Metric" />
-              </SelectTrigger>
-              <SelectContent>
-                {numericCols.map((c) => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </CardHeader>
-        <CardContent className="h-80">
-          {hasData && metrics!.donutChart.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Tooltip
-                  contentStyle={{ borderRadius: 8, border: "1px solid oklch(0.92 0.01 255)", fontSize: 12 }}
-                  formatter={(v: number, n: string) => [v.toLocaleString(), n]}
-                />
-                <Legend verticalAlign="middle" align="right" layout="vertical" iconType="circle" wrapperStyle={{ fontSize: 12, paddingLeft: 16 }} />
-                <Pie
-                  data={metrics!.donutChart}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={60}
-                  outerRadius={110}
-                  paddingAngle={2}
-                  stroke="oklch(1 0 0)"
-                  strokeWidth={2}
-                  isAnimationActive
-                  animationDuration={500}
-                >
-                  {metrics!.donutChart.map((_, i) => (
-                    <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <EmptyChart message={hasData ? "No categorical column detected — distribution unavailable." : undefined} />
-          )}
-        </CardContent>
-      </Card>
+      {hasData && (
+        <div className="space-y-4">
+          <div className="grid gap-4 lg:grid-cols-2">
+            {charts.map((c) => (
+              <CustomChartCard
+                key={c.id}
+                config={c}
+                schema={schema!}
+                rows={filtered}
+                onChange={(next) => updateChart(c.id, next)}
+                onRemove={() => removeChart(c.id)}
+              />
+            ))}
+          </div>
+          <Button variant="outline" onClick={addChart} className="w-full border-dashed">
+            <Plus className="h-4 w-4" /> Add Chart
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
