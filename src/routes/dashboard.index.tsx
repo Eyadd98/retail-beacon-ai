@@ -3,9 +3,15 @@ import {
   Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer,
   Tooltip, XAxis, YAxis,
 } from "recharts";
-import { ArrowUpRight, DollarSign, ShoppingCart, Receipt, Tag, Sparkles, UploadCloud, FileWarning } from "lucide-react";
+import { ArrowUpRight, Hash, Sparkles, UploadCloud, FileWarning, Filter } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useDashboardData, deriveMetrics, normalizeRows, type RawRow } from "@/lib/dashboard-store";
+import { Button } from "@/components/ui/button";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+  useDashboardData, deriveMetrics, inferSchema, applyFilters, uniqueValues, type RawRow,
+} from "@/lib/dashboard-store";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Papa from "papaparse";
 import { toast } from "sonner";
@@ -18,12 +24,22 @@ export const Route = createFileRoute("/dashboard/")({
 const kpiIcons = [DollarSign, ShoppingCart, Receipt, Tag];
 
 function Overview() {
-  const { rows, setRows, rawRows, setRawRows } = useDashboardData();
+  const {
+    rawRows, setRawRows, schema, setSchema, filters, setFilter, resetFilters,
+  } = useDashboardData();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
 
-  const metrics = useMemo(() => (rows && rows.length ? deriveMetrics(rows) : null), [rows]);
+  const filtered = useMemo(
+    () => (rawRows ? applyFilters(rawRows, filters) : []),
+    [rawRows, filters],
+  );
+  const metrics = useMemo(
+    () => (schema && filtered.length ? deriveMetrics(filtered, schema) : null),
+    [filtered, schema],
+  );
   const hasData = !!metrics;
+  const slicerCols = (schema?.categorical ?? []).slice(0, 2);
 
   const handleFiles = (files: FileList | null) => {
     const file = files?.[0];
@@ -41,14 +57,13 @@ function Overview() {
           console.log("[CSV] parsed rows:", result.data.length, result.data.slice(0, 3));
           if (result.errors?.length) console.warn("[CSV] parse errors:", result.errors);
           const raw = (result.data ?? []).filter((r) => r && Object.keys(r).length > 0);
-          const parsed = normalizeRows(raw);
-          if (!parsed.length) {
-            toast.error("No valid rows found in CSV — check column headers");
+          if (!raw.length) {
+            toast.error("No valid rows found in CSV");
             return;
           }
           setRawRows(raw);
-          setRows(parsed);
-          toast.success(`Processed ${parsed.length} rows from ${file.name}`);
+          setSchema(inferSchema(raw));
+          toast.success(`Processed ${raw.length} rows from ${file.name}`);
         } catch (e) {
           console.error("[CSV] failed to process:", e);
           toast.error("Failed to parse CSV");
@@ -68,7 +83,11 @@ function Overview() {
     <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
-        <p className="text-sm text-muted-foreground">Your retail performance at a glance.</p>
+        <p className="text-sm text-muted-foreground">
+          {hasData
+            ? `Auto-detected ${schema?.numeric.length ?? 0} numeric, ${schema?.categorical.length ?? 0} categorical, ${schema?.date ? 1 : 0} date columns from your data.`
+            : "Upload any CSV — the dashboard adapts to your columns automatically."}
+        </p>
       </div>
 
       <div
@@ -86,11 +105,50 @@ function Overview() {
         <div>
           <p className="text-sm font-medium text-foreground">Drag &amp; drop CSV or Excel files here</p>
           <p className="text-xs text-muted-foreground">
-            {hasData ? `Loaded ${rows!.length} rows — drop a new file to replace` : "or click to browse — expects Date, Revenue, Orders, Category"}
+            {rawRows
+              ? `Loaded ${rawRows.length} rows — drop a new file to replace`
+              : "or click to browse — any CSV works"}
           </p>
         </div>
         <input ref={inputRef} type="file" accept=".csv" className="hidden" onChange={(e) => handleFiles(e.target.files)} />
       </div>
+
+      {hasData && slicerCols.length > 0 && (
+        <Card className="shadow-card">
+          <CardContent className="flex flex-wrap items-center gap-3 p-4">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Filter className="h-4 w-4 text-primary" />
+              Filters
+            </div>
+            {slicerCols.map((col) => {
+              const opts = uniqueValues(rawRows!, col);
+              const val = filters[col] ?? "__all__";
+              return (
+                <div key={col} className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">{col}</span>
+                  <Select value={val} onValueChange={(v) => setFilter(col, v)}>
+                    <SelectTrigger className="h-9 w-[180px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all__">All</SelectItem>
+                      {opts.map((o) => (
+                        <SelectItem key={o} value={o}>{o}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              );
+            })}
+            {Object.values(filters).some((v) => v && v !== "__all__") && (
+              <Button variant="ghost" size="sm" onClick={resetFilters}>Clear</Button>
+            )}
+            <span className="ml-auto text-xs text-muted-foreground">
+              {filtered.length} / {rawRows!.length} rows
+            </span>
+          </CardContent>
+        </Card>
+      )}
 
       {rawRows && rawRows.length > 0 && (
         <Card className="shadow-card">
@@ -126,20 +184,17 @@ function Overview() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {(metrics?.kpis ?? [
-          { label: "Total Revenue", value: "—", delta: "No data" },
-          { label: "Total Orders", value: "—", delta: "No data" },
-          { label: "Avg Order Value", value: "—", delta: "No data" },
-          { label: "Top Category", value: "—", delta: "No data" },
-        ]).map((k, i) => {
-          const Icon = kpiIcons[i];
+        {(metrics?.kpis.length
+          ? metrics.kpis
+          : [0, 1, 2, 3].map((i) => ({ label: `Metric ${i + 1}`, value: "—", delta: "No data" }))
+        ).map((k) => {
           return (
             <Card key={k.label} className="shadow-card transition hover:shadow-elegant">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{k.label}</span>
+                  <span className="truncate text-xs font-medium uppercase tracking-wide text-muted-foreground">{k.label}</span>
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent">
-                    <Icon className="h-4 w-4 text-primary" />
+                    <Hash className="h-4 w-4 text-primary" />
                   </div>
                 </div>
                 <div className="mt-3 text-2xl font-semibold">{k.value}</div>
@@ -175,42 +230,50 @@ function Overview() {
       <div className="grid gap-4 lg:grid-cols-5">
         <Card className="lg:col-span-3 shadow-card">
           <CardHeader>
-            <CardTitle className="text-base">Sales Over Time</CardTitle>
+            <CardTitle className="text-base">
+              {hasData && metrics!.lineXCol && metrics!.lineYCol
+                ? `${metrics!.lineYCol} over ${metrics!.lineXCol}`
+                : "Trend Over Time"}
+            </CardTitle>
           </CardHeader>
           <CardContent className="h-72">
-            {hasData ? (
+            {hasData && metrics!.lineChart.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={metrics!.salesOverTime} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
+              <LineChart data={metrics!.lineChart} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 255)" vertical={false} />
-                <XAxis dataKey="date" stroke="oklch(0.5 0.02 260)" fontSize={12} tickLine={false} axisLine={false} minTickGap={24} />
-                <YAxis stroke="oklch(0.5 0.02 260)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
-                <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid oklch(0.92 0.01 255)", fontSize: 12 }} formatter={(v: number) => `$${v.toLocaleString()}`} />
-                <Line type="monotone" dataKey="revenue" stroke="oklch(0.55 0.2 260)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                <XAxis dataKey="x" stroke="oklch(0.5 0.02 260)" fontSize={12} tickLine={false} axisLine={false} minTickGap={24} />
+                <YAxis stroke="oklch(0.5 0.02 260)" fontSize={12} tickLine={false} axisLine={false} />
+                <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid oklch(0.92 0.01 255)", fontSize: 12 }} formatter={(v: number) => v.toLocaleString()} />
+                <Line type="monotone" dataKey="y" name={metrics!.lineYCol} stroke="oklch(0.55 0.2 260)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
               </LineChart>
             </ResponsiveContainer>
             ) : (
-              <EmptyChart />
+              <EmptyChart message={hasData ? "No date column detected — line chart unavailable." : undefined} />
             )}
           </CardContent>
         </Card>
 
         <Card className="lg:col-span-2 shadow-card">
           <CardHeader>
-            <CardTitle className="text-base">Revenue by Category</CardTitle>
+            <CardTitle className="text-base">
+              {hasData && metrics!.barXCol && metrics!.barYCol
+                ? `${metrics!.barYCol} by ${metrics!.barXCol}`
+                : "Breakdown by Category"}
+            </CardTitle>
           </CardHeader>
           <CardContent className="h-72">
-            {hasData ? (
+            {hasData && metrics!.barChart.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={metrics!.revenueByCategory}>
+              <BarChart data={metrics!.barChart}>
                 <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 255)" vertical={false} />
-                <XAxis dataKey="category" stroke="oklch(0.5 0.02 260)" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis stroke="oklch(0.5 0.02 260)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
-                <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid oklch(0.92 0.01 255)", fontSize: 12 }} formatter={(v: number) => `$${v.toLocaleString()}`} />
-                <Bar dataKey="revenue" fill="oklch(0.55 0.2 260)" radius={[6, 6, 0, 0]} />
+                <XAxis dataKey="x" stroke="oklch(0.5 0.02 260)" fontSize={11} tickLine={false} axisLine={false} />
+                <YAxis stroke="oklch(0.5 0.02 260)" fontSize={12} tickLine={false} axisLine={false} />
+                <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid oklch(0.92 0.01 255)", fontSize: 12 }} formatter={(v: number) => v.toLocaleString()} />
+                <Bar dataKey="y" name={metrics!.barYCol} fill="oklch(0.55 0.2 260)" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
             ) : (
-              <EmptyChart />
+              <EmptyChart message={hasData ? "No categorical column detected — bar chart unavailable." : undefined} />
             )}
           </CardContent>
         </Card>
@@ -219,12 +282,12 @@ function Overview() {
   );
 }
 
-function EmptyChart() {
+function EmptyChart({ message }: { message?: string }) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-muted-foreground">
       <FileWarning className="h-8 w-8 text-muted-foreground/60" />
-      <p className="text-sm font-medium">No data uploaded yet</p>
-      <p className="text-xs">Upload a CSV to see your metrics here.</p>
+      <p className="text-sm font-medium">{message ?? "No data uploaded yet"}</p>
+      {!message && <p className="text-xs">Upload a CSV to see your metrics here.</p>}
     </div>
   );
 }
