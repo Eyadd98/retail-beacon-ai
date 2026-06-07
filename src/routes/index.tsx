@@ -20,12 +20,7 @@ const revenueTrend = [
   { month: "Dec", revenue: 124000, orders: 1829, region: "CA" },
 ];
 
-const totals = {
-  revenue: revenueTrend.reduce((s, d) => s + d.revenue, 0),
-  orders: revenueTrend.reduce((s, d) => s + d.orders, 0),
-};
 const defaultKpis = {
-  label: "Revenue",
   revenue: "$842K",
   orders: "12,438",
   aov: "$67.72",
