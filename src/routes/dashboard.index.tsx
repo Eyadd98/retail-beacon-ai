@@ -362,6 +362,59 @@ function Overview() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="shadow-card">
+        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
+          <CardTitle className="text-base">
+            {hasData && metrics!.barXCol && metrics!.barYCol
+              ? `Distribution of ${metrics!.barYCol} by ${metrics!.barXCol}`
+              : "Distribution"}
+          </CardTitle>
+          {numericCols.length > 0 && (
+            <Select value={metrics?.barYCol ?? numericCols[0]} onValueChange={setBarY}>
+              <SelectTrigger className="h-8 w-[160px] text-xs">
+                <SelectValue placeholder="Metric" />
+              </SelectTrigger>
+              <SelectContent>
+                {numericCols.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </CardHeader>
+        <CardContent className="h-80">
+          {hasData && metrics!.donutChart.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Tooltip
+                  contentStyle={{ borderRadius: 8, border: "1px solid oklch(0.92 0.01 255)", fontSize: 12 }}
+                  formatter={(v: number, n: string) => [v.toLocaleString(), n]}
+                />
+                <Legend verticalAlign="middle" align="right" layout="vertical" iconType="circle" wrapperStyle={{ fontSize: 12, paddingLeft: 16 }} />
+                <Pie
+                  data={metrics!.donutChart}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={60}
+                  outerRadius={110}
+                  paddingAngle={2}
+                  stroke="oklch(1 0 0)"
+                  strokeWidth={2}
+                  isAnimationActive
+                  animationDuration={500}
+                >
+                  {metrics!.donutChart.map((_, i) => (
+                    <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyChart message={hasData ? "No categorical column detected — distribution unavailable." : undefined} />
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
