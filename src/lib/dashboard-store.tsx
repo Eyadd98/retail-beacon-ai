@@ -103,7 +103,11 @@ const fmtNum = (n: number) =>
 
 export type Kpi = { label: string; value: string; delta: string; positive: boolean };
 
-export function deriveMetrics(rows: RawRow[], schema: Schema) {
+export function deriveMetrics(
+  rows: RawRow[],
+  schema: Schema,
+  opts?: { lineY?: string; barY?: string },
+) {
   const kpiCols = schema.numeric.slice(0, 4);
   const kpis: Kpi[] = kpiCols.map((col) => {
     const nums = rows.map((r) => parseNum(r[col])).filter((n): n is number => n !== null);
@@ -118,7 +122,9 @@ export function deriveMetrics(rows: RawRow[], schema: Schema) {
     };
   });
 
-  const lineYCol = schema.numeric[0];
+  const lineYCol = opts?.lineY && schema.numeric.includes(opts.lineY)
+    ? opts.lineY
+    : schema.numeric[0];
   let lineChart: { x: string; y: number; key: number }[] = [];
   if (schema.date && lineYCol) {
     const byDay = new Map<string, { x: string; y: number; key: number }>();
@@ -136,7 +142,9 @@ export function deriveMetrics(rows: RawRow[], schema: Schema) {
   }
 
   const barXCol = schema.categorical[0];
-  const barYCol = schema.numeric[0];
+  const barYCol = opts?.barY && schema.numeric.includes(opts.barY)
+    ? opts.barY
+    : schema.numeric[0];
   let barChart: { x: string; y: number }[] = [];
   if (barXCol && barYCol) {
     const byCat = new Map<string, number>();
