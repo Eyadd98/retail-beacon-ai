@@ -29,7 +29,7 @@ export function AuthShell({
             Join thousands of teams using AI to surface what's working — and what's not — in their stores.
           </p>
         </div>
-        <div className="relative text-xs text-primary-foreground/70">© 2026 Retailyn</div>
+        <div className="relative text-xs text-primary-foreground/70">© 2026 AI-powered Analytics</div>
       </div>
       <div className="flex items-center justify-center p-6 md:p-12">
         <div className="w-full max-w-sm animate-fade-in">
