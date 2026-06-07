@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useState } from "react";
 import type { DateRange } from "react-day-picker";
+import { DashboardProvider } from "@/lib/dashboard-store";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — AI Data Analyst Dashboard" }] }),
@@ -23,6 +24,7 @@ function DashboardLayout() {
     to: new Date(2026, 5, 30),
   });
   return (
+    <DashboardProvider>
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
@@ -74,5 +76,6 @@ function DashboardLayout() {
         </div>
       </div>
     </SidebarProvider>
+    </DashboardProvider>
   );
 }
