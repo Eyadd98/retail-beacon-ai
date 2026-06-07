@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { AuthShell } from "@/components/auth-shell";
 
 export const Route = createFileRoute("/login")({
-  head: () => ({ meta: [{ title: "Log in — Retailyn" }] }),
+  head: () => ({ meta: [{ title: "Log in — AI Data Analyst Dashboard" }] }),
   component: LoginPage,
 });
 
@@ -14,7 +14,7 @@ function LoginPage() {
   return (
     <AuthShell
       title="Welcome back"
-      subtitle="Log in to your Retailyn dashboard."
+      subtitle="Log in to your dashboard."
       footer={
         <>
           Don't have an account?{" "}
