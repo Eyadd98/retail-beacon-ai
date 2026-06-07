@@ -1,11 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
-  Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer,
+  Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer,
   Tooltip, XAxis, YAxis,
 } from "recharts";
 import { ArrowUpRight, DollarSign, ShoppingCart, Receipt, Tag, Sparkles, UploadCloud, FileWarning } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { insights } from "@/lib/dashboard-data";
 import { useDashboardData, deriveMetrics, type CsvRow } from "@/lib/dashboard-store";
 import Papa from "papaparse";
 import { toast } from "sonner";
@@ -46,6 +45,7 @@ function Overview() {
                 revenue: Number(String(lower["revenue"] ?? "0").replace(/[^0-9.-]/g, "")) || 0,
                 orders: Number(String(lower["orders"] ?? "0").replace(/[^0-9.-]/g, "")) || 0,
                 category: lower["category"] || "Uncategorized",
+                region: lower["region"] || undefined,
               };
             })
             .filter((r) => r.date || r.revenue || r.orders);
@@ -128,7 +128,7 @@ function Overview() {
             <span className="ml-auto text-xs text-muted-foreground">Updated 2 min ago</span>
           </div>
           <ul className="mt-4 space-y-3">
-            {(hasData ? insights : ["Upload a CSV to unlock AI-powered insights about your data."]).map((t, i) => (
+            {(hasData ? metrics!.insights : ["Upload a CSV to unlock AI-powered insights about your data."]).map((t, i) => (
               <li key={i} className="flex gap-3 rounded-lg bg-accent/40 p-3 text-sm">
                 <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-gradient-primary" />
                 <span className="text-foreground/90">{t}</span>
@@ -146,19 +146,13 @@ function Overview() {
           <CardContent className="h-72">
             {hasData ? (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={metrics!.salesOverTime}>
-                <defs>
-                  <linearGradient id="rev" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="oklch(0.55 0.2 260)" stopOpacity={0.4} />
-                    <stop offset="100%" stopColor="oklch(0.55 0.2 260)" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
+              <LineChart data={metrics!.salesOverTime} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 255)" vertical={false} />
-                <XAxis dataKey="month" stroke="oklch(0.5 0.02 260)" fontSize={12} tickLine={false} axisLine={false} />
+                <XAxis dataKey="date" stroke="oklch(0.5 0.02 260)" fontSize={12} tickLine={false} axisLine={false} minTickGap={24} />
                 <YAxis stroke="oklch(0.5 0.02 260)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
                 <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid oklch(0.92 0.01 255)", fontSize: 12 }} formatter={(v: number) => `$${v.toLocaleString()}`} />
-                <Area type="monotone" dataKey="revenue" stroke="oklch(0.55 0.2 260)" strokeWidth={2} fill="url(#rev)" />
-              </AreaChart>
+                <Line type="monotone" dataKey="revenue" stroke="oklch(0.55 0.2 260)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+              </LineChart>
             </ResponsiveContainer>
             ) : (
               <EmptyChart />
