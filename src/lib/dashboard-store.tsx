@@ -5,6 +5,7 @@ export type CsvRow = {
   revenue: number;
   orders: number;
   category: string;
+  region?: string;
 };
 
 type DashboardContextValue = {
@@ -34,25 +35,34 @@ export function deriveMetrics(rows: CsvRow[]) {
   const aov = totalOrders ? totalRevenue / totalOrders : 0;
   const categories = new Set(rows.map((r) => r.category)).size;
 
-  const byMonth = new Map<string, { revenue: number; orders: number; key: number }>();
+  const byDay = new Map<string, { revenue: number; orders: number; key: number; label: string }>();
   rows.forEach((r) => {
     const d = new Date(r.date);
     if (isNaN(d.getTime())) return;
-    const key = d.getFullYear() * 12 + d.getMonth();
-    const label = `${MONTHS[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`;
-    const cur = byMonth.get(label) ?? { revenue: 0, orders: 0, key };
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const label = `${MONTHS[d.getMonth()]} ${String(d.getDate()).padStart(2, "0")}`;
+    const cur = byDay.get(iso) ?? { revenue: 0, orders: 0, key: d.getTime(), label };
     cur.revenue += r.revenue;
     cur.orders += r.orders;
-    byMonth.set(label, cur);
+    byDay.set(iso, cur);
   });
-  const salesOverTime = Array.from(byMonth.entries())
-    .sort((a, b) => a[1].key - b[1].key)
-    .map(([month, v]) => ({ month, revenue: v.revenue, orders: v.orders }));
+  const salesOverTime = Array.from(byDay.values())
+    .sort((a, b) => a.key - b.key)
+    .map((v) => ({ date: v.label, revenue: v.revenue, orders: v.orders }));
 
   const byCat = new Map<string, number>();
   rows.forEach((r) => byCat.set(r.category, (byCat.get(r.category) ?? 0) + r.revenue));
   const revenueByCategory = Array.from(byCat.entries())
     .map(([category, revenue]) => ({ category, revenue }))
+    .sort((a, b) => b.revenue - a.revenue);
+
+  const byRegion = new Map<string, number>();
+  rows.forEach((r) => {
+    if (!r.region) return;
+    byRegion.set(r.region, (byRegion.get(r.region) ?? 0) + r.revenue);
+  });
+  const revenueByRegion = Array.from(byRegion.entries())
+    .map(([region, revenue]) => ({ region, revenue }))
     .sort((a, b) => b.revenue - a.revenue);
 
   const fmtCurrency = (n: number) =>
@@ -65,5 +75,19 @@ export function deriveMetrics(rows: CsvRow[]) {
     { label: "Top Category", value: revenueByCategory[0]?.category ?? "—", delta: fmtCurrency(revenueByCategory[0]?.revenue ?? 0), positive: true },
   ];
 
-  return { kpis, salesOverTime, revenueByCategory };
+  const top = revenueByCategory[0];
+  const topPct = top && totalRevenue ? Math.round((top.revenue / totalRevenue) * 100) : 0;
+  const topRegion = revenueByRegion[0];
+
+  const insights = [
+    `Total revenue reached ${fmtCurrency(totalRevenue)} across ${totalOrders.toLocaleString()} total orders.`,
+    top
+      ? `${top.category} is driving performance, making up ${topPct}% of total revenue.`
+      : `No category data available to highlight a leader.`,
+    topRegion
+      ? `The highest performing region was ${topRegion.region} with ${fmtCurrency(topRegion.revenue)} in sales.`
+      : `Add a "Region" column to your CSV to surface regional performance.`,
+  ];
+
+  return { kpis, salesOverTime, revenueByCategory, revenueByRegion, insights };
 }
