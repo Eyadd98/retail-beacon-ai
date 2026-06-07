@@ -4,6 +4,9 @@ import { UploadCloud, FileSpreadsheet, CheckCircle2, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import Papa from "papaparse";
+import { toast } from "sonner";
+import { useDashboardData, type CsvRow } from "@/lib/dashboard-store";
 
 export const Route = createFileRoute("/dashboard/upload")({
   component: UploadPage,
@@ -15,10 +18,41 @@ function UploadPage() {
   const [files, setFiles] = useState<FileState[]>([]);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { setRows } = useDashboardData();
+
+  const parseCsv = (file: File) => {
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (result) => {
+        const parsed: CsvRow[] = result.data
+          .map((r) => {
+            const lower: Record<string, string> = {};
+            Object.keys(r).forEach((k) => (lower[k.trim().toLowerCase()] = String(r[k] ?? "").trim()));
+            return {
+              date: lower["date"] ?? "",
+              revenue: Number(String(lower["revenue"] ?? "0").replace(/[^0-9.-]/g, "")) || 0,
+              orders: Number(String(lower["orders"] ?? "0").replace(/[^0-9.-]/g, "")) || 0,
+              category: lower["category"] || "Uncategorized",
+            };
+          })
+          .filter((r) => r.date || r.revenue || r.orders);
+        if (!parsed.length) {
+          toast.error(`No valid rows in ${file.name}`);
+          return;
+        }
+        setRows(parsed);
+        toast.success(`Processed ${parsed.length} rows from ${file.name}`);
+      },
+      error: () => toast.error(`Failed to parse ${file.name}`),
+    });
+  };
 
   const addFiles = (list: FileList | null) => {
     if (!list) return;
     Array.from(list).forEach((f) => {
+      if (/\.csv$/i.test(f.name)) parseCsv(f);
+      else toast.error(`${f.name}: only .csv is supported for parsing`);
       const item: FileState = { name: f.name, size: f.size, progress: 0, done: false };
       setFiles((prev) => [...prev, item]);
       const id = setInterval(() => {
