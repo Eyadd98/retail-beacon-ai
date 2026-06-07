@@ -21,8 +21,6 @@ export const Route = createFileRoute("/dashboard/")({
   component: Overview,
 });
 
-const kpiIcons = [DollarSign, ShoppingCart, Receipt, Tag];
-
 function Overview() {
   const {
     rawRows, setRawRows, schema, setSchema, filters, setFilter, resetFilters,
