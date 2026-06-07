@@ -231,6 +231,7 @@ export function deriveMetrics(
     barChart,
     barXCol,
     barYCol,
+    donutChart,
     insights: insights.slice(0, 3),
   };
 }
