@@ -5,7 +5,8 @@ import {
 } from "recharts";
 import { ArrowUpRight, DollarSign, ShoppingCart, Receipt, Tag, Sparkles, UploadCloud, FileWarning } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useDashboardData, deriveMetrics, type CsvRow } from "@/lib/dashboard-store";
+import { useDashboardData, deriveMetrics, normalizeRows, type RawRow } from "@/lib/dashboard-store";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Papa from "papaparse";
 import { toast } from "sonner";
 import { useMemo, useRef, useState } from "react";
@@ -17,7 +18,7 @@ export const Route = createFileRoute("/dashboard/")({
 const kpiIcons = [DollarSign, ShoppingCart, Receipt, Tag];
 
 function Overview() {
-  const { rows, setRows } = useDashboardData();
+  const { rows, setRows, rawRows, setRawRows } = useDashboardData();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
 
@@ -31,37 +32,37 @@ function Overview() {
       toast.error("Please upload a .csv file");
       return;
     }
-    Papa.parse<Record<string, string>>(file, {
+    Papa.parse<RawRow>(file, {
       header: true,
       skipEmptyLines: true,
+      dynamicTyping: false,
       complete: (result) => {
         try {
-          const parsed: CsvRow[] = result.data
-            .map((r) => {
-              const lower: Record<string, string> = {};
-              Object.keys(r).forEach((k) => (lower[k.trim().toLowerCase()] = String(r[k] ?? "").trim()));
-              return {
-                date: lower["date"] ?? "",
-                revenue: Number(String(lower["revenue"] ?? "0").replace(/[^0-9.-]/g, "")) || 0,
-                orders: Number(String(lower["orders"] ?? "0").replace(/[^0-9.-]/g, "")) || 0,
-                category: lower["category"] || "Uncategorized",
-                region: lower["region"] || undefined,
-              };
-            })
-            .filter((r) => r.date || r.revenue || r.orders);
+          console.log("[CSV] parsed rows:", result.data.length, result.data.slice(0, 3));
+          if (result.errors?.length) console.warn("[CSV] parse errors:", result.errors);
+          const raw = (result.data ?? []).filter((r) => r && Object.keys(r).length > 0);
+          const parsed = normalizeRows(raw);
           if (!parsed.length) {
-            toast.error("No valid rows found in CSV");
+            toast.error("No valid rows found in CSV — check column headers");
             return;
           }
+          setRawRows(raw);
           setRows(parsed);
           toast.success(`Processed ${parsed.length} rows from ${file.name}`);
         } catch (e) {
+          console.error("[CSV] failed to process:", e);
           toast.error("Failed to parse CSV");
         }
       },
-      error: () => toast.error("Failed to read CSV file"),
+      error: (err) => {
+        console.error("[CSV] read error:", err);
+        toast.error(`Failed to read CSV: ${err.message}`);
+      },
     });
   };
+
+  const previewHeaders = rawRows && rawRows.length ? Object.keys(rawRows[0]) : [];
+  const previewRows = rawRows ? rawRows.slice(0, 5) : [];
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -90,6 +91,39 @@ function Overview() {
         </div>
         <input ref={inputRef} type="file" accept=".csv" className="hidden" onChange={(e) => handleFiles(e.target.files)} />
       </div>
+
+      {rawRows && rawRows.length > 0 && (
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle className="text-base">Data Preview</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-3 text-xs text-muted-foreground">
+              Showing first {previewRows.length} of {rawRows.length} rows
+            </p>
+            <div className="overflow-x-auto rounded-md border border-border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {previewHeaders.map((h) => (
+                      <TableHead key={h} className="whitespace-nowrap">{h}</TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {previewRows.map((r, i) => (
+                    <TableRow key={i}>
+                      {previewHeaders.map((h) => (
+                        <TableCell key={h} className="whitespace-nowrap">{String(r[h] ?? "")}</TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {(metrics?.kpis ?? [
