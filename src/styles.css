@@ -188,7 +188,7 @@
   background-clip: padding-box;
   border: 1px solid transparent;
 }
-@utility ai-border::before {
+.ai-border::before {
   content: "";
   position: absolute;
   inset: 0;
