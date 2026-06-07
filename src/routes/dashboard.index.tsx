@@ -255,12 +255,34 @@ function Overview() {
             <span className="ml-auto text-xs text-muted-foreground">Updated 2 min ago</span>
           </div>
           <ul className="mt-4 space-y-3">
-            {(hasData ? metrics!.insights : ["Upload a CSV to unlock AI-powered insights about your data."]).map((t, i) => (
-              <li key={i} className="flex gap-3 rounded-lg bg-accent/40 p-3 text-sm">
+            {hasData ? (
+              metrics!.insights.map((ins, i) => {
+                const s = INSIGHT_STYLES[ins.kind];
+                const Icon = s.icon;
+                return (
+                  <li key={i} className="flex gap-3 rounded-lg border border-border/60 bg-accent/40 p-3 text-sm">
+                    <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${s.badge}`}>
+                      <Icon className="h-3.5 w-3.5" />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className={`h-5 px-1.5 text-[10px] font-semibold uppercase tracking-wide ${s.badge}`}>
+                          {s.label}
+                        </Badge>
+                        <span className="text-sm font-semibold text-foreground">{ins.title}</span>
+                      </div>
+                      <p className="text-foreground/85">{ins.detail}</p>
+                      <p className="text-xs text-muted-foreground"><span className="font-medium text-foreground/70">Action:</span> {ins.action}</p>
+                    </div>
+                  </li>
+                );
+              })
+            ) : (
+              <li className="flex gap-3 rounded-lg bg-accent/40 p-3 text-sm">
                 <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-gradient-primary" />
-                <span className="text-foreground/90">{t}</span>
+                <span className="text-foreground/90">Upload a CSV to unlock AI-powered insights about your data.</span>
               </li>
-            ))}
+            )}
           </ul>
         </div>
       </div>
