@@ -40,17 +40,20 @@ function Overview() {
   } = useDashboardData();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
+  const [lineY, setLineY] = useState<string | undefined>(undefined);
+  const [barY, setBarY] = useState<string | undefined>(undefined);
 
   const filtered = useMemo(
     () => (rawRows ? applyFilters(rawRows, filters) : []),
     [rawRows, filters],
   );
   const metrics = useMemo(
-    () => (schema && filtered.length ? deriveMetrics(filtered, schema) : null),
-    [filtered, schema],
+    () => (schema && filtered.length ? deriveMetrics(filtered, schema, { lineY, barY }) : null),
+    [filtered, schema, lineY, barY],
   );
   const hasData = !!metrics;
   const slicerCols = (schema?.categorical ?? []).slice(0, 2);
+  const numericCols = schema?.numeric ?? [];
 
   const handleFiles = (files: FileList | null) => {
     const file = files?.[0];
@@ -241,12 +244,24 @@ function Overview() {
 
       <div className="grid gap-4 lg:grid-cols-5">
         <Card className="lg:col-span-3 shadow-card">
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
             <CardTitle className="text-base">
               {hasData && metrics!.lineXCol && metrics!.lineYCol
                 ? `${metrics!.lineYCol} over ${metrics!.lineXCol}`
                 : "Trend Over Time"}
             </CardTitle>
+            {numericCols.length > 0 && (
+              <Select value={metrics?.lineYCol ?? numericCols[0]} onValueChange={setLineY}>
+                <SelectTrigger className="h-8 w-[160px] text-xs">
+                  <SelectValue placeholder="Metric" />
+                </SelectTrigger>
+                <SelectContent>
+                  {numericCols.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </CardHeader>
           <CardContent className="h-72">
             {hasData && metrics!.lineChart.length > 0 ? (
@@ -256,7 +271,7 @@ function Overview() {
                 <XAxis dataKey="x" stroke="oklch(0.5 0.02 260)" fontSize={12} tickLine={false} axisLine={false} minTickGap={24} />
                 <YAxis stroke="oklch(0.5 0.02 260)" fontSize={12} tickLine={false} axisLine={false} />
                 <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid oklch(0.92 0.01 255)", fontSize: 12 }} formatter={(v: number) => v.toLocaleString()} />
-                <Line type="monotone" dataKey="y" name={metrics!.lineYCol} stroke="oklch(0.55 0.2 260)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                <Line type="monotone" dataKey="y" name={metrics!.lineYCol} stroke="oklch(0.55 0.2 260)" strokeWidth={2} dot={false} activeDot={{ r: 4 }} isAnimationActive animationDuration={500} />
               </LineChart>
             </ResponsiveContainer>
             ) : (
@@ -266,12 +281,24 @@ function Overview() {
         </Card>
 
         <Card className="lg:col-span-2 shadow-card">
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
             <CardTitle className="text-base">
               {hasData && metrics!.barXCol && metrics!.barYCol
                 ? `${metrics!.barYCol} by ${metrics!.barXCol}`
                 : "Breakdown by Category"}
             </CardTitle>
+            {numericCols.length > 0 && (
+              <Select value={metrics?.barYCol ?? numericCols[0]} onValueChange={setBarY}>
+                <SelectTrigger className="h-8 w-[160px] text-xs">
+                  <SelectValue placeholder="Metric" />
+                </SelectTrigger>
+                <SelectContent>
+                  {numericCols.map((c) => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </CardHeader>
           <CardContent className="h-72">
             {hasData && metrics!.barChart.length > 0 ? (
@@ -281,7 +308,7 @@ function Overview() {
                 <XAxis dataKey="x" stroke="oklch(0.5 0.02 260)" fontSize={11} tickLine={false} axisLine={false} />
                 <YAxis stroke="oklch(0.5 0.02 260)" fontSize={12} tickLine={false} axisLine={false} />
                 <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid oklch(0.92 0.01 255)", fontSize: 12 }} formatter={(v: number) => v.toLocaleString()} />
-                <Bar dataKey="y" name={metrics!.barYCol} fill="oklch(0.55 0.2 260)" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="y" name={metrics!.barYCol} fill="oklch(0.55 0.2 260)" radius={[6, 6, 0, 0]} isAnimationActive animationDuration={500} />
               </BarChart>
             </ResponsiveContainer>
             ) : (
