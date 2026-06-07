@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export const Route = createFileRoute("/dashboard")({
-  head: () => ({ meta: [{ title: "Dashboard — Retailyn" }] }),
+  head: () => ({ meta: [{ title: "Dashboard — AI Data Analyst Dashboard" }] }),
   component: DashboardLayout,
 });
 
