@@ -6,9 +6,9 @@ import { BarChart3, Sparkles, TrendingUp, Zap, ShieldCheck, ArrowRight } from "l
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Retailyn — AI-Powered Retail Analytics" },
+      { title: "AI Data Analyst Dashboard — AI-Powered Retail Analytics" },
       { name: "description", content: "Turn your retail data into revenue. AI-driven insights, dashboards, and forecasts for modern commerce teams." },
-      { property: "og:title", content: "Retailyn — AI-Powered Retail Analytics" },
+      { property: "og:title", content: "AI Data Analyst Dashboard — AI-Powered Retail Analytics" },
       { property: "og:description", content: "Turn your retail data into revenue with AI-driven insights." },
     ],
   }),
@@ -24,7 +24,7 @@ function Index() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-primary shadow-elegant">
               <BarChart3 className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="text-lg font-semibold tracking-tight">Retailyn</span>
+            <span className="text-lg font-semibold tracking-tight">AI Data Analyst Dashboard</span>
           </Link>
           <nav className="hidden items-center gap-8 text-sm text-muted-foreground md:flex">
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
@@ -117,7 +117,7 @@ function Index() {
 
       <footer className="border-t border-border">
         <div className="mx-auto max-w-7xl px-6 py-8 text-sm text-muted-foreground">
-          © 2026 Retailyn. AI-powered retail analytics.
+          © 2026 AI Data Analyst Dashboard. AI-powered retail analytics.
         </div>
       </footer>
     </div>
