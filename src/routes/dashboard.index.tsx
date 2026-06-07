@@ -3,6 +3,7 @@ import {
   ArrowUpRight, Hash, Sparkles, UploadCloud, FileWarning, Filter, Plus,
   DollarSign, ShoppingCart, Users, Clock, Percent,
   TrendingUp, AlertTriangle, Lightbulb,
+  Briefcase, MapPin, GraduationCap, HeartPulse, Calendar, Star, Activity, Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,12 +22,19 @@ import { CustomChartCard, type ChartConfig, type ChartType } from "@/components/
 
 function getKpiIcon(label: string) {
   const lower = label.toLowerCase();
-  if (lower.includes("revenue") || lower.includes("sales") || lower.includes("price") || lower.includes("cost") || lower.includes("profit")) return DollarSign;
-  if (lower.includes("order") || lower.includes("cart") || lower.includes("qty")) return ShoppingCart;
-  if (lower.includes("customer") || lower.includes("user") || lower.includes("client") || lower.includes("people")) return Users;
-  if (lower.includes("time") || lower.includes("aht") || lower.includes("duration") || lower.includes("hours")) return Clock;
-  if (lower.includes("rate") || lower.includes("conversion") || lower.includes("%")) return Percent;
-  return Hash;
+  const has = (...keys: string[]) => keys.some((k) => lower.includes(k));
+  if (has("job", "role", "department", "work")) return Briefcase;
+  if (has("distance", "location", "region", "city")) return MapPin;
+  if (has("education", "degree", "study")) return GraduationCap;
+  if (has("satisfaction", "environment", "wellness", "health")) return HeartPulse;
+  if (has("age", "years", "tenure")) return Calendar;
+  if (has("rating", "score", "performance", "qa")) return Star;
+  if (has("revenue", "sales", "price", "income", "salary", "cost", "profit")) return DollarSign;
+  if (has("order", "cart", "qty")) return ShoppingCart;
+  if (has("customer", "user", "employee", "people", "client")) return Users;
+  if (has("time", "aht", "duration", "hours")) return Clock;
+  if (has("rate", "conversion", "%")) return Percent;
+  return Activity;
 }
 
 const INSIGHT_STYLES = {
