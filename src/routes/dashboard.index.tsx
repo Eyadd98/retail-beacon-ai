@@ -199,13 +199,14 @@ function Overview() {
           ? metrics.kpis
           : [0, 1, 2, 3].map((i) => ({ label: `Metric ${i + 1}`, value: "—", delta: "No data" }))
         ).map((k) => {
+          const Icon = getKpiIcon(k.label);
           return (
             <Card key={k.label} className="shadow-card transition hover:shadow-elegant">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
                   <span className="truncate text-xs font-medium uppercase tracking-wide text-muted-foreground">{k.label}</span>
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent">
-                    <Hash className="h-4 w-4 text-primary" />
+                    <Icon className="h-4 w-4 text-primary" />
                   </div>
                 </div>
                 <div className="mt-3 text-2xl font-semibold">{k.value}</div>
