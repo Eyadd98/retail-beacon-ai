@@ -117,7 +117,7 @@ function Index() {
 
       <footer className="border-t border-border">
         <div className="mx-auto max-w-7xl px-6 py-8 text-sm text-muted-foreground">
-          © 2026 AI Data Analyst Dashboard. AI-powered retail analytics.
+          © 2026 AI-powered retail analytics.
         </div>
       </footer>
     </div>
