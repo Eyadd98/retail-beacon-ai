@@ -3,7 +3,7 @@ import {
   Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer,
   Tooltip, XAxis, YAxis,
 } from "recharts";
-import { ArrowUpRight, DollarSign, ShoppingCart, TrendingUp, MapPin, Sparkles } from "lucide-react";
+import { ArrowUpRight, DollarSign, Users, Percent, TrendingUp, Sparkles, UploadCloud } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { kpis, salesOverTime, revenueByCategory, insights } from "@/lib/dashboard-data";
 
@@ -11,7 +11,7 @@ export const Route = createFileRoute("/dashboard/")({
   component: Overview,
 });
 
-const kpiIcons = [DollarSign, ShoppingCart, TrendingUp, MapPin];
+const kpiIcons = [DollarSign, Users, Percent, TrendingUp];
 
 function Overview() {
   return (
@@ -20,6 +20,20 @@ function Overview() {
         <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
         <p className="text-sm text-muted-foreground">Your retail performance at a glance.</p>
       </div>
+
+      <label
+        htmlFor="dashboard-upload"
+        className="group flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-border bg-card p-8 text-center shadow-card transition hover:border-primary/60 hover:bg-accent/40"
+      >
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-primary text-primary-foreground shadow-elegant transition group-hover:scale-105">
+          <UploadCloud className="h-6 w-6" />
+        </div>
+        <div>
+          <p className="text-sm font-medium text-foreground">Drag &amp; drop CSV or Excel files here</p>
+          <p className="text-xs text-muted-foreground">or click to browse — up to 50MB</p>
+        </div>
+        <input id="dashboard-upload" type="file" accept=".csv,.xls,.xlsx" className="hidden" />
+      </label>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.map((k, i) => {
