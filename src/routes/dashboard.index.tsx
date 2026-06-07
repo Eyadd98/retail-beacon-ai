@@ -49,7 +49,7 @@ function Overview() {
     Papa.parse<RawRow>(file, {
       header: true,
       skipEmptyLines: true,
-      dynamicTyping: false,
+      dynamicTyping: true,
       complete: (result) => {
         try {
           console.log("[CSV] parsed rows:", result.data.length, result.data.slice(0, 3));
