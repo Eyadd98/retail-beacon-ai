@@ -160,23 +160,68 @@ export function deriveMetrics(
       .slice(0, 12);
   }
 
-  const insights: string[] = [];
-  if (kpis[0]) insights.push(`${kpis[0].label} totals ${fmtNum(rows.map((r) => parseNum(r[kpiCols[0]]) ?? 0).reduce((s, n) => s + n, 0))} across ${rows.length} rows.`);
+  type InsightKind = "success" | "warning" | "idea";
+  type Insight = { kind: InsightKind; title: string; detail: string; action: string };
+  const insights: Insight[] = [];
+
+  // Insight 1 — Performance (top performer in bar chart)
   if (barChart.length) {
     const total = barChart.reduce((s, b) => s + b.y, 0);
     const top = barChart[0];
     const pct = total ? Math.round((top.y / total) * 100) : 0;
-    insights.push(`${top.x} leads ${barXCol} by ${barYCol}, contributing ${pct}% of the total.`);
+    insights.push({
+      kind: "success",
+      title: "Top Performer",
+      detail: `${top.x} drives ${pct}% of ${barYCol} across ${barXCol} (${fmtNum(top.y)}).`,
+      action:
+        pct >= 30
+          ? `Double down: allocate more budget and replicate ${top.x}'s playbook across other ${barXCol}.`
+          : `Lean in: ${top.x} leads but the field is fragmented — invest to widen the gap.`,
+    });
   }
+
+  // Insight 2 — Risk / Improvement (lowest performer)
+  if (barChart.length >= 2) {
+    const total = barChart.reduce((s, b) => s + b.y, 0);
+    const bottom = barChart[barChart.length - 1];
+    const pct = total ? Math.round((bottom.y / total) * 100) : 0;
+    insights.push({
+      kind: "warning",
+      title: "Underperformer",
+      detail: `${bottom.x} contributes only ${pct}% of ${barYCol} (${fmtNum(bottom.y)}) — the weakest in ${barXCol}.`,
+      action: `Investigate operational bottlenecks in ${bottom.x}; consider reallocating resources or running a focused improvement sprint.`,
+    });
+  }
+
+  // Insight 3 — Trend (line chart trajectory + forecast)
   if (lineChart.length >= 2) {
     const first = lineChart[0].y;
     const last = lineChart[lineChart.length - 1].y;
     const change = first ? Math.round(((last - first) / first) * 100) : 0;
-    insights.push(`${lineYCol} ${change >= 0 ? "rose" : "fell"} ${Math.abs(change)}% from ${lineChart[0].x} to ${lineChart[lineChart.length - 1].x}.`);
+    const avg = lineChart.reduce((s, p) => s + p.y, 0) / lineChart.length;
+    const projected = last + (last - first) / Math.max(lineChart.length - 1, 1);
+    insights.push({
+      kind: "idea",
+      title: change >= 0 ? "Positive Momentum" : "Declining Trend",
+      detail: `${lineYCol} ${change >= 0 ? "grew" : "dropped"} ${Math.abs(change)}% from ${lineChart[0].x} → ${lineChart[lineChart.length - 1].x} (avg ${fmtNum(avg)}).`,
+      action:
+        change >= 0
+          ? `Trajectory points to ~${fmtNum(projected)} next period. Lock in the wins: scale the channels behind this lift.`
+          : `If the slope holds, expect ~${fmtNum(projected)} next period. Run a root-cause review before the drop compounds.`,
+    });
   }
+
   while (insights.length < 3) {
-    insights.push("Upload richer data (dates, categories, numerics) to surface more insights.");
+    insights.push({
+      kind: "idea",
+      title: "More Signal Needed",
+      detail: "Add date, categorical, and numeric columns to unlock richer recommendations.",
+      action: "Upload a more complete dataset to surface prescriptive insights.",
+    });
   }
+
+  // Donut chart — distribution of selected metric across selected category
+  const donutChart = barChart.map((b) => ({ name: b.x, value: b.y }));
 
   return {
     kpis,
@@ -186,6 +231,7 @@ export function deriveMetrics(
     barChart,
     barXCol,
     barYCol,
+    donutChart,
     insights: insights.slice(0, 3),
   };
 }

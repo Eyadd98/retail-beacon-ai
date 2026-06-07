@@ -1,12 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
   Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer,
-  Tooltip, XAxis, YAxis,
+  Tooltip, XAxis, YAxis, PieChart, Pie, Cell, Legend,
 } from "recharts";
 import {
   ArrowUpRight, Hash, Sparkles, UploadCloud, FileWarning, Filter,
   DollarSign, ShoppingCart, Users, Clock, Percent,
+  TrendingUp, AlertTriangle, Lightbulb,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +31,27 @@ function getKpiIcon(label: string) {
   if (lower.includes("rate") || lower.includes("conversion") || lower.includes("%")) return Percent;
   return Hash;
 }
+
+const DONUT_COLORS = [
+  "oklch(0.65 0.22 260)",
+  "oklch(0.7 0.2 180)",
+  "oklch(0.72 0.2 60)",
+  "oklch(0.65 0.25 20)",
+  "oklch(0.6 0.22 320)",
+  "oklch(0.7 0.18 140)",
+  "oklch(0.62 0.2 220)",
+  "oklch(0.7 0.2 40)",
+  "oklch(0.6 0.22 290)",
+  "oklch(0.7 0.18 100)",
+  "oklch(0.65 0.2 350)",
+  "oklch(0.68 0.2 200)",
+];
+
+const INSIGHT_STYLES = {
+  success: { label: "Success", icon: TrendingUp, badge: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30", dot: "bg-emerald-500" },
+  warning: { label: "Warning", icon: AlertTriangle, badge: "bg-amber-500/15 text-amber-600 border-amber-500/30", dot: "bg-amber-500" },
+  idea:    { label: "Idea",    icon: Lightbulb,    badge: "bg-primary/15 text-primary border-primary/30",        dot: "bg-primary" },
+} as const;
 
 export const Route = createFileRoute("/dashboard/")({
   component: Overview,
@@ -232,12 +255,34 @@ function Overview() {
             <span className="ml-auto text-xs text-muted-foreground">Updated 2 min ago</span>
           </div>
           <ul className="mt-4 space-y-3">
-            {(hasData ? metrics!.insights : ["Upload a CSV to unlock AI-powered insights about your data."]).map((t, i) => (
-              <li key={i} className="flex gap-3 rounded-lg bg-accent/40 p-3 text-sm">
+            {hasData ? (
+              metrics!.insights.map((ins, i) => {
+                const s = INSIGHT_STYLES[ins.kind];
+                const Icon = s.icon;
+                return (
+                  <li key={i} className="flex gap-3 rounded-lg border border-border/60 bg-accent/40 p-3 text-sm">
+                    <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${s.badge}`}>
+                      <Icon className="h-3.5 w-3.5" />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className={`h-5 px-1.5 text-[10px] font-semibold uppercase tracking-wide ${s.badge}`}>
+                          {s.label}
+                        </Badge>
+                        <span className="text-sm font-semibold text-foreground">{ins.title}</span>
+                      </div>
+                      <p className="text-foreground/85">{ins.detail}</p>
+                      <p className="text-xs text-muted-foreground"><span className="font-medium text-foreground/70">Action:</span> {ins.action}</p>
+                    </div>
+                  </li>
+                );
+              })
+            ) : (
+              <li className="flex gap-3 rounded-lg bg-accent/40 p-3 text-sm">
                 <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-gradient-primary" />
-                <span className="text-foreground/90">{t}</span>
+                <span className="text-foreground/90">Upload a CSV to unlock AI-powered insights about your data.</span>
               </li>
-            ))}
+            )}
           </ul>
         </div>
       </div>
@@ -317,6 +362,59 @@ function Overview() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="shadow-card">
+        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
+          <CardTitle className="text-base">
+            {hasData && metrics!.barXCol && metrics!.barYCol
+              ? `Distribution of ${metrics!.barYCol} by ${metrics!.barXCol}`
+              : "Distribution"}
+          </CardTitle>
+          {numericCols.length > 0 && (
+            <Select value={metrics?.barYCol ?? numericCols[0]} onValueChange={setBarY}>
+              <SelectTrigger className="h-8 w-[160px] text-xs">
+                <SelectValue placeholder="Metric" />
+              </SelectTrigger>
+              <SelectContent>
+                {numericCols.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </CardHeader>
+        <CardContent className="h-80">
+          {hasData && metrics!.donutChart.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Tooltip
+                  contentStyle={{ borderRadius: 8, border: "1px solid oklch(0.92 0.01 255)", fontSize: 12 }}
+                  formatter={(v: number, n: string) => [v.toLocaleString(), n]}
+                />
+                <Legend verticalAlign="middle" align="right" layout="vertical" iconType="circle" wrapperStyle={{ fontSize: 12, paddingLeft: 16 }} />
+                <Pie
+                  data={metrics!.donutChart}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={60}
+                  outerRadius={110}
+                  paddingAngle={2}
+                  stroke="oklch(1 0 0)"
+                  strokeWidth={2}
+                  isAnimationActive
+                  animationDuration={500}
+                >
+                  {metrics!.donutChart.map((_, i) => (
+                    <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyChart message={hasData ? "No categorical column detected — distribution unavailable." : undefined} />
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
