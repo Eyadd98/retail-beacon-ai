@@ -45,20 +45,49 @@ function Overview() {
   } = useDashboardData();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
-  const [lineY, setLineY] = useState<string | undefined>(undefined);
-  const [barY, setBarY] = useState<string | undefined>(undefined);
+  const [charts, setCharts] = useState<ChartConfig[]>([]);
+  const [initializedFor, setInitializedFor] = useState<string | null>(null);
 
   const filtered = useMemo(
     () => (rawRows ? applyFilters(rawRows, filters) : []),
     [rawRows, filters],
   );
   const metrics = useMemo(
-    () => (schema && filtered.length ? deriveMetrics(filtered, schema, { lineY, barY }) : null),
-    [filtered, schema, lineY, barY],
+    () => (schema && filtered.length ? deriveMetrics(filtered, schema) : null),
+    [filtered, schema],
   );
   const hasData = !!metrics;
   const slicerCols = (schema?.categorical ?? []).slice(0, 2);
   const numericCols = schema?.numeric ?? [];
+
+  // Auto-seed default charts the first time a schema becomes available.
+  const schemaKey = schema ? schema.headers.join("|") : null;
+  if (schema && schemaKey !== initializedFor) {
+    const seeded: ChartConfig[] = [];
+    const num = schema.numeric;
+    const cat = schema.categorical[0];
+    if (schema.date && num[0]) {
+      seeded.push({ id: crypto.randomUUID(), type: "line", x: schema.date, y: num[0] });
+    }
+    if (cat && num[0]) {
+      seeded.push({ id: crypto.randomUUID(), type: "bar", x: cat, y: num[0] });
+    }
+    if (cat && (num[1] ?? num[0])) {
+      seeded.push({ id: crypto.randomUUID(), type: "donut", x: cat, y: num[1] ?? num[0] });
+    }
+    setCharts(seeded);
+    setInitializedFor(schemaKey);
+  }
+
+  const addChart = () => {
+    const x = schema?.date ?? schema?.categorical[0] ?? "";
+    const y = schema?.numeric[0] ?? "";
+    setCharts((cs) => [...cs, { id: crypto.randomUUID(), type: "bar", x, y }]);
+  };
+  const updateChart = (id: string, next: ChartConfig) =>
+    setCharts((cs) => cs.map((c) => (c.id === id ? next : c)));
+  const removeChart = (id: string) =>
+    setCharts((cs) => cs.filter((c) => c.id !== id));
 
   const handleFiles = (files: FileList | null) => {
     const file = files?.[0];
