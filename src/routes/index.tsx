@@ -7,7 +7,11 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Retailyn — AI-Powered Retail Analytics" },
-      { name: "description", content: "Turn your retail data into revenue. AI-driven insights, dashboards, and forecasts for modern commerce teams." },
+      {
+        name: "description",
+        content:
+          "Turn your retail data into revenue. AI-driven insights, dashboards, and forecasts for modern commerce teams.",
+      },
       { property: "og:title", content: "Retailyn — AI-Powered Retail Analytics" },
       { property: "og:description", content: "Turn your retail data into revenue with AI-driven insights." },
     ],
@@ -24,12 +28,18 @@ function Index() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-primary shadow-elegant">
               <BarChart3 className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="text-lg font-semibold tracking-tight">Retailyn</span>
+            <span className="text-lg font-semibold tracking-tight">Eyad</span>
           </Link>
           <nav className="hidden items-center gap-8 text-sm text-muted-foreground md:flex">
-            <a href="#features" className="hover:text-foreground transition-colors">Features</a>
-            <a href="#insights" className="hover:text-foreground transition-colors">AI Insights</a>
-            <a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a>
+            <a href="#features" className="hover:text-foreground transition-colors">
+              Features
+            </a>
+            <a href="#insights" className="hover:text-foreground transition-colors">
+              AI Insights
+            </a>
+            <a href="#pricing" className="hover:text-foreground transition-colors">
+              Pricing
+            </a>
           </nav>
           <div className="flex items-center gap-2">
             <Button asChild variant="ghost" size="sm">
@@ -50,14 +60,18 @@ function Index() {
             New: GPT-powered retail forecasts
           </div>
           <h1 className="mx-auto mt-6 max-w-4xl text-5xl font-semibold tracking-tight md:text-7xl">
-            AI-Powered <span className="bg-gradient-primary bg-clip-text text-transparent">Retail Analytics</span> for modern commerce
+            AI-Powered <span className="bg-gradient-primary bg-clip-text text-transparent">Retail Analytics</span> for
+            modern commerce
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-            Connect your sales data, surface what's driving revenue, and act on AI recommendations — all from one elegant dashboard.
+            Connect your sales data, surface what's driving revenue, and act on AI recommendations — all from one
+            elegant dashboard.
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
             <Button asChild size="lg" className="bg-gradient-primary shadow-elegant hover:opacity-90">
-              <Link to="/signup">Get Started <ArrowRight className="ml-1 h-4 w-4" /></Link>
+              <Link to="/signup">
+                Get Started <ArrowRight className="ml-1 h-4 w-4" />
+              </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
               <Link to="/login">Log In</Link>
@@ -97,14 +111,25 @@ function Index() {
       <section id="features" className="mx-auto max-w-7xl px-6 py-24">
         <div className="grid gap-6 md:grid-cols-3">
           {[
-            { i: TrendingUp, t: "Real-time KPIs", d: "Revenue, orders, AOV, and regional performance — refreshed live." },
+            {
+              i: TrendingUp,
+              t: "Real-time KPIs",
+              d: "Revenue, orders, AOV, and regional performance — refreshed live.",
+            },
             { i: Sparkles, t: "AI Insights", d: "Natural-language explanations of what changed and why it matters." },
             { i: Zap, t: "Instant Upload", d: "Drag a CSV or Excel file. We handle parsing and enrichment." },
             { i: BarChart3, t: "Beautiful Charts", d: "Time series, breakdowns, and cohorts built for executives." },
-            { i: ShieldCheck, t: "Enterprise-grade", d: "SOC 2 ready. Your data stays encrypted at rest and in transit." },
+            {
+              i: ShieldCheck,
+              t: "Enterprise-grade",
+              d: "SOC 2 ready. Your data stays encrypted at rest and in transit.",
+            },
             { i: ArrowRight, t: "Actionable", d: "Every insight ships with a recommended next step." },
           ].map(({ i: Icon, t, d }) => (
-            <div key={t} className="rounded-xl border border-border bg-card p-6 shadow-card transition hover:shadow-elegant">
+            <div
+              key={t}
+              className="rounded-xl border border-border bg-card p-6 shadow-card transition hover:shadow-elegant"
+            >
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent">
                 <Icon className="h-5 w-5 text-primary" />
               </div>
