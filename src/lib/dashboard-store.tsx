@@ -8,16 +8,63 @@ export type CsvRow = {
   region?: string;
 };
 
+export type RawRow = Record<string, string>;
+
+const COLUMN_ALIASES: Record<keyof CsvRow, string[]> = {
+  date: ["date", "day", "timestamp", "order date", "created", "created_at", "month"],
+  revenue: ["revenue", "sales", "total", "amount", "total sales", "gross", "income"],
+  orders: ["orders", "order count", "transactions", "quantity", "qty", "count", "units"],
+  category: ["category", "product category", "type", "segment", "product", "department"],
+  region: ["region", "country", "state", "location", "area", "market", "territory"],
+};
+
+export function findColumn(headers: string[], key: keyof CsvRow): string | undefined {
+  const lowered = headers.map((h) => h.trim().toLowerCase());
+  for (const alias of COLUMN_ALIASES[key]) {
+    const idx = lowered.indexOf(alias);
+    if (idx !== -1) return headers[idx];
+    const partial = lowered.findIndex((h) => h.includes(alias));
+    if (partial !== -1) return headers[partial];
+  }
+  return undefined;
+}
+
+export function normalizeRows(raw: RawRow[]): CsvRow[] {
+  if (!raw.length) return [];
+  const headers = Object.keys(raw[0]);
+  const map = {
+    date: findColumn(headers, "date"),
+    revenue: findColumn(headers, "revenue"),
+    orders: findColumn(headers, "orders"),
+    category: findColumn(headers, "category"),
+    region: findColumn(headers, "region"),
+  };
+  const num = (v: unknown) =>
+    Number(String(v ?? "0").replace(/[^0-9.-]/g, "")) || 0;
+  return raw
+    .map((r) => ({
+      date: map.date ? String(r[map.date] ?? "").trim() : "",
+      revenue: map.revenue ? num(r[map.revenue]) : 0,
+      orders: map.orders ? num(r[map.orders]) : 0,
+      category: map.category ? String(r[map.category] ?? "").trim() || "Uncategorized" : "Uncategorized",
+      region: map.region ? String(r[map.region] ?? "").trim() || undefined : undefined,
+    }))
+    .filter((r) => r.date || r.revenue || r.orders);
+}
+
 type DashboardContextValue = {
   rows: CsvRow[] | null;
   setRows: (rows: CsvRow[] | null) => void;
+  rawRows: RawRow[] | null;
+  setRawRows: (rows: RawRow[] | null) => void;
 };
 
 const DashboardContext = createContext<DashboardContextValue | undefined>(undefined);
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
   const [rows, setRows] = useState<CsvRow[] | null>(null);
-  const value = useMemo(() => ({ rows, setRows }), [rows]);
+  const [rawRows, setRawRows] = useState<RawRow[] | null>(null);
+  const value = useMemo(() => ({ rows, setRows, rawRows, setRawRows }), [rows, rawRows]);
   return <DashboardContext.Provider value={value}>{children}</DashboardContext.Provider>;
 }
 
