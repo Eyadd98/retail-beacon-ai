@@ -21,7 +21,7 @@ export function AuthShell({
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20 backdrop-blur">
             <BarChart3 className="h-4 w-4" />
           </div>
-          <span className="text-lg font-semibold">Retailyn</span>
+          <span className="text-lg font-semibold">AI Data Analyst Dashboard</span>
         </Link>
         <div className="relative space-y-4">
           <h2 className="text-3xl font-semibold tracking-tight">Turn retail data into revenue.</h2>
