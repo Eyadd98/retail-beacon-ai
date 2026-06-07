@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
-  ArrowUpRight, Hash, Sparkles, UploadCloud, FileWarning, Filter, Plus,
+  ArrowUpRight, Sparkles, UploadCloud, FileWarning, Filter, Plus,
   DollarSign, ShoppingCart, Users, Clock, Percent,
   TrendingUp, AlertTriangle, Lightbulb,
   Briefcase, MapPin, GraduationCap, HeartPulse, Calendar, Star, Activity, Trash2,
@@ -18,7 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import Papa from "papaparse";
 import { toast } from "sonner";
 import { useMemo, useRef, useState } from "react";
-import { CustomChartCard, type ChartConfig, type ChartType } from "@/components/custom-chart-card";
+import { CustomChartCard, type ChartConfig } from "@/components/custom-chart-card";
 
 function uniqueCount(rows: RawRow[], col: string): number {
   const set = new Set<string>();
