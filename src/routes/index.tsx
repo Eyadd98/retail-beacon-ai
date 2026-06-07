@@ -3,21 +3,33 @@ import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { BarChart3, Sparkles, TrendingUp, Zap, ShieldCheck, ArrowRight } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
+import { useState } from "react";
 
 const revenueTrend = [
-  { month: "Jan", revenue: 42000 },
-  { month: "Feb", revenue: 48000 },
-  { month: "Mar", revenue: 55000 },
-  { month: "Apr", revenue: 51000 },
-  { month: "May", revenue: 63000 },
-  { month: "Jun", revenue: 70000 },
-  { month: "Jul", revenue: 78000 },
-  { month: "Aug", revenue: 82000 },
-  { month: "Sep", revenue: 91000 },
-  { month: "Oct", revenue: 99000 },
-  { month: "Nov", revenue: 110000 },
-  { month: "Dec", revenue: 124000 },
+  { month: "Jan", revenue: 42000, orders: 640, region: "NY" },
+  { month: "Feb", revenue: 48000, orders: 712, region: "NY" },
+  { month: "Mar", revenue: 55000, orders: 815, region: "CA" },
+  { month: "Apr", revenue: 51000, orders: 760, region: "TX" },
+  { month: "May", revenue: 63000, orders: 940, region: "NY" },
+  { month: "Jun", revenue: 70000, orders: 1042, region: "CA" },
+  { month: "Jul", revenue: 78000, orders: 1158, region: "NY" },
+  { month: "Aug", revenue: 82000, orders: 1215, region: "FL" },
+  { month: "Sep", revenue: 91000, orders: 1348, region: "CA" },
+  { month: "Oct", revenue: 99000, orders: 1462, region: "NY" },
+  { month: "Nov", revenue: 110000, orders: 1622, region: "NY" },
+  { month: "Dec", revenue: 124000, orders: 1829, region: "CA" },
 ];
+
+const defaultKpis = {
+  revenue: "$842K",
+  orders: "12,438",
+  aov: "$67.72",
+  region: "NY",
+  rDelta: "+12.4%",
+  oDelta: "+8.1%",
+  aDelta: "+3.9%",
+  regionDelta: "32% share",
+};
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -32,6 +44,21 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
+  const [active, setActive] = useState<null | (typeof revenueTrend)[number]>(null);
+
+  const kpis = active
+    ? {
+        revenue: `$${(active.revenue / 1000).toFixed(1)}K`,
+        orders: active.orders.toLocaleString(),
+        aov: `$${(active.revenue / active.orders).toFixed(2)}`,
+        region: active.region,
+        rDelta: active.month,
+        oDelta: active.month,
+        aDelta: active.month,
+        regionDelta: "top region",
+      }
+    : defaultKpis;
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur-xl">
@@ -90,22 +117,36 @@ function Index() {
               </div>
               <div className="grid grid-cols-2 gap-4 p-6 md:grid-cols-4">
                 {[
-                  { l: "Revenue", v: "$842K", d: "+12.4%" },
-                  { l: "Orders", v: "12,438", d: "+8.1%" },
-                  { l: "AOV", v: "$67.72", d: "+3.9%" },
-                  { l: "Top Region", v: "NY", d: "32% share" },
+                  { l: "Revenue", v: kpis.revenue, d: kpis.rDelta },
+                  { l: "Orders", v: kpis.orders, d: kpis.oDelta },
+                  { l: "AOV", v: kpis.aov, d: kpis.aDelta },
+                  { l: "Top Region", v: kpis.region, d: kpis.regionDelta },
                 ].map((k) => (
-                  <div key={k.l} className="rounded-lg border border-border bg-background p-4 text-left">
+                  <div key={k.l} className="rounded-lg border border-border bg-background p-4 text-left transition-colors">
                     <div className="text-xs text-muted-foreground">{k.l}</div>
-                    <div className="mt-1 text-xl font-semibold">{k.v}</div>
-                    <div className="text-xs text-primary">{k.d}</div>
+                    <div
+                      key={k.v}
+                      className="mt-1 text-xl font-semibold tabular-nums animate-fade-in"
+                    >
+                      {k.v}
+                    </div>
+                    <div key={k.d} className="text-xs text-primary animate-fade-in">{k.d}</div>
                   </div>
                 ))}
               </div>
               <div className="px-6 pb-6">
                 <div className="h-48 rounded-lg bg-gradient-to-tr from-primary/5 via-primary/0 to-transparent p-2">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={revenueTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <AreaChart
+                      data={revenueTrend}
+                      margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                      onMouseMove={(state: { activePayload?: Array<{ payload: (typeof revenueTrend)[number] }> }) => {
+                        if (state?.activePayload?.[0]?.payload) {
+                          setActive(state.activePayload[0].payload);
+                        }
+                      }}
+                      onMouseLeave={() => setActive(null)}
+                    >
                       <defs>
                         <linearGradient id="landingRev" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="0%" stopColor="oklch(0.55 0.2 260)" stopOpacity={0.45} />
