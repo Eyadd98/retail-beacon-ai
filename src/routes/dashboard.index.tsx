@@ -122,17 +122,13 @@ function Overview() {
   const [charts, setCharts] = useState<ChartConfig[]>([]);
   const [initializedFor, setInitializedFor] = useState<string | null>(null);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
-  const [hydrated, setHydrated] = useState(false);
 
   // Load saved workspace, dataset, and charts on mount
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const state = await loadInitialState();
-      if (cancelled || !state) {
-        setHydrated(true);
-        return;
-      }
+      if (cancelled || !state) return;
       setWorkspaceId(state.workspaceId);
       if (state.rows && state.schema) {
         setRawRows(state.rows);
@@ -141,7 +137,6 @@ function Overview() {
         setInitializedFor(state.schema.headers.join("|"));
         setCharts(state.charts);
       }
-      setHydrated(true);
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
