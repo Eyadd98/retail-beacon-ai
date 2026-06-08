@@ -286,6 +286,8 @@ type DashboardContextValue = {
   filters: Filters;
   setFilter: (col: string, value: string) => void;
   resetFilters: () => void;
+  dateRange: DateRange | undefined;
+  setDateRange: (r: DateRange | undefined) => void;
 };
 
 const DashboardContext = createContext<DashboardContextValue | undefined>(undefined);
@@ -294,18 +296,20 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const [rawRows, setRawRowsState] = useState<RawRow[] | null>(null);
   const [schema, setSchema] = useState<Schema | null>(null);
   const [filters, setFilters] = useState<Filters>({});
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   const setRawRows = (rows: RawRow[] | null) => {
     setRawRowsState(rows);
     setFilters({});
+    setDateRange(undefined);
   };
   const setFilter = (col: string, value: string) =>
     setFilters((f) => ({ ...f, [col]: value }));
   const resetFilters = () => setFilters({});
 
   const value = useMemo(
-    () => ({ rawRows, setRawRows, schema, setSchema, filters, setFilter, resetFilters }),
-    [rawRows, schema, filters],
+    () => ({ rawRows, setRawRows, schema, setSchema, filters, setFilter, resetFilters, dateRange, setDateRange }),
+    [rawRows, schema, filters, dateRange],
   );
   return <DashboardContext.Provider value={value}>{children}</DashboardContext.Provider>;
 }
