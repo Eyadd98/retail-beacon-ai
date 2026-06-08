@@ -120,7 +120,6 @@ function Overview() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [charts, setCharts] = useState<ChartConfig[]>([]);
-  const [initializedFor, setInitializedFor] = useState<string | null>(null);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
 
   // Load saved workspace, dataset, and charts on mount
@@ -133,8 +132,6 @@ function Overview() {
       if (state.rows && state.schema) {
         setRawRows(state.rows);
         setSchema(state.schema);
-        // mark as already initialized so we don't re-seed default charts
-        setInitializedFor(state.schema.headers.join("|"));
         setCharts(state.charts);
       }
     })();
@@ -188,7 +185,6 @@ function Overview() {
     resetFilters();
     setDateRange(undefined);
     setCharts([]);
-    setInitializedFor(null);
     if (inputRef.current) inputRef.current.value = "";
     if (workspaceId) await clearWorkspaceData(workspaceId);
     toast.success("Cleared all data");
@@ -230,7 +226,6 @@ function Overview() {
               if (saved) persisted.push(saved);
             }
             setCharts(persisted);
-            setInitializedFor(inferred.headers.join("|"));
           })();
         } catch (e) {
           console.error("[CSV] failed to process:", e);
