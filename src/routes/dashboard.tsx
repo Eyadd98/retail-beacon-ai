@@ -9,9 +9,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { useState } from "react";
 import type { DateRange } from "react-day-picker";
-import { DashboardProvider } from "@/lib/dashboard-store";
+import { DashboardProvider, useDashboardData } from "@/lib/dashboard-store";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export const Route = createFileRoute("/dashboard")({
@@ -20,13 +19,19 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function DashboardLayout() {
-  const [range, setRange] = useState<DateRange | undefined>({
-    from: new Date(2026, 5, 1),
-    to: new Date(2026, 5, 30),
-  });
   return (
     <DashboardProvider>
-    <SidebarProvider>
+      <SidebarProvider>
+        <DashboardChrome />
+      </SidebarProvider>
+    </DashboardProvider>
+  );
+}
+
+function DashboardChrome() {
+  const { dateRange, setDateRange } = useDashboardData();
+  const range = dateRange as DateRange | undefined;
+  return (
       <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
         <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
@@ -57,7 +62,7 @@ function DashboardLayout() {
                   <Calendar
                     mode="range"
                     selected={range}
-                    onSelect={setRange}
+                    onSelect={(r) => setDateRange(r ? { from: r.from, to: r.to } : undefined)}
                     numberOfMonths={2}
                     initialFocus
                     className={cn("p-3 pointer-events-auto")}
@@ -77,7 +82,5 @@ function DashboardLayout() {
           </main>
         </div>
       </div>
-    </SidebarProvider>
-    </DashboardProvider>
   );
 }

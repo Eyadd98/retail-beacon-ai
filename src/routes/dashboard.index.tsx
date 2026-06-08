@@ -20,12 +20,12 @@ import { toast } from "sonner";
 import { useMemo, useRef, useState } from "react";
 import { CustomChartCard, type ChartConfig } from "@/components/custom-chart-card";
 
-function uniqueCount(rows: RawRow[], col: string): number {
+function uniqueCount(rows: RawRow[], col: string, cap = 50): number {
   const set = new Set<string>();
   for (const r of rows) {
     const v = String(r[col] ?? "").trim();
     if (v) set.add(v);
-    if (set.size > 50) break;
+    if (set.size > cap) break;
   }
   return set.size;
 }
@@ -64,10 +64,14 @@ function seedCharts(schema: import("@/lib/dashboard-store").Schema, rows: RawRow
     usedY.add(y);
   }
 
-  // 3. Bar chart: higher-cardinality categorical (>7) or any remaining
+  // 3. Bar chart: medium-cardinality categorical (8-15) to keep visuals legible
   const highCard =
-    schema.categorical.find((c) => !usedX.has(c) && uniqueCount(rows, c) > 7) ??
-    schema.categorical.find((c) => !usedX.has(c));
+    schema.categorical.find((c) => {
+      if (usedX.has(c)) return false;
+      const u = uniqueCount(rows, c, 16);
+      return u > 7 && u <= 15;
+    }) ??
+    schema.categorical.find((c) => !usedX.has(c) && uniqueCount(rows, c, 16) <= 15);
   if (highCard && schema.numeric.length) {
     const y = pickPriorityNumeric(schema.numeric, ["revenue", "sales", "amount", "total"], usedY) ?? schema.numeric[0];
     seeded.push({ id: crypto.randomUUID(), type: "bar", x: highCard, y });
@@ -106,6 +110,7 @@ export const Route = createFileRoute("/dashboard/")({
 function Overview() {
   const {
     rawRows, setRawRows, schema, setSchema, filters, setFilter, resetFilters,
+    dateRange, setDateRange,
   } = useDashboardData();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -113,16 +118,22 @@ function Overview() {
   const [initializedFor, setInitializedFor] = useState<string | null>(null);
 
   const filtered = useMemo(
-    () => (rawRows ? applyFilters(rawRows, filters) : []),
-    [rawRows, filters],
+    () => (rawRows ? applyFilters(rawRows, filters, { dateCol: schema?.date, dateRange }) : []),
+    [rawRows, filters, schema?.date, dateRange],
   );
   const metrics = useMemo(
     () => (schema && filtered.length ? deriveMetrics(filtered, schema) : null),
     [filtered, schema],
   );
   const hasData = !!metrics;
-  const slicerCols = (schema?.categorical ?? []).slice(0, 2);
-  const numericCols = schema?.numeric ?? [];
+  // Dynamic, smart slicers: only categoricals with <15 unique values
+  const slicerCols = useMemo(() => {
+    if (!schema || !rawRows) return [];
+    return schema.categorical.filter((c) => {
+      const u = uniqueCount(rawRows, c, 16);
+      return u >= 2 && u < 15;
+    });
+  }, [schema, rawRows]);
 
   // Auto-seed default charts the first time a schema becomes available.
   const schemaKey = schema ? schema.headers.join("|") : null;
@@ -145,6 +156,7 @@ function Overview() {
     setRawRows(null);
     setSchema(null);
     resetFilters();
+    setDateRange(undefined);
     setCharts([]);
     setInitializedFor(null);
     if (inputRef.current) inputRef.current.value = "";
