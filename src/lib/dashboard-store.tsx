@@ -9,6 +9,13 @@ export type Schema = {
   date: string | undefined;
 };
 
+export type DateRange = { from?: Date; to?: Date };
+
+const ID_LIKE = /(^|[\s_\-])(id|code|zip|postcode|postal|number|no\.?|phone|ssn|account|acct)([\s_\-]|$)/i;
+export function isIdLikeColumn(name: string): boolean {
+  return ID_LIKE.test(name) || /ID$/.test(name);
+}
+
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const parseNum = (v: unknown): number | null => {
@@ -81,10 +88,37 @@ export function inferSchema(rows: RawRow[]): Schema {
 
 export type Filters = Record<string, string>;
 
-export function applyFilters(rows: RawRow[], filters: Filters): RawRow[] {
+export function applyFilters(
+  rows: RawRow[],
+  filters: Filters,
+  opts?: { dateCol?: string; dateRange?: DateRange },
+): RawRow[] {
   const active = Object.entries(filters).filter(([, v]) => v && v !== "__all__");
-  if (!active.length) return rows;
-  return rows.filter((r) => active.every(([k, v]) => String(r[k] ?? "").trim() === v));
+  const { dateCol, dateRange } = opts ?? {};
+  const from = dateRange?.from ? new Date(dateRange.from).setHours(0, 0, 0, 0) : undefined;
+  const to = dateRange?.to ? new Date(dateRange.to).setHours(23, 59, 59, 999) : undefined;
+  if (!active.length && from === undefined && to === undefined) return rows;
+  return rows.filter((r) => {
+    if (!active.every(([k, v]) => String(r[k] ?? "").trim() === v)) return false;
+    if (dateCol && (from !== undefined || to !== undefined)) {
+      const d = parseDate(r[dateCol]);
+      if (!d) return false;
+      const t = d.getTime();
+      if (from !== undefined && t < from) return false;
+      if (to !== undefined && t > to) return false;
+    }
+    return true;
+  });
+}
+
+function uniqueCountFast(rows: RawRow[], col: string, cap = 50): number {
+  const set = new Set<string>();
+  for (const r of rows) {
+    const v = String(r[col] ?? "").trim();
+    if (v) set.add(v);
+    if (set.size > cap) break;
+  }
+  return set.size;
 }
 
 export function uniqueValues(rows: RawRow[], col: string): string[] {
@@ -108,7 +142,8 @@ export function deriveMetrics(
   schema: Schema,
   opts?: { lineY?: string; barY?: string },
 ) {
-  const kpiCols = schema.numeric.slice(0, 4);
+  const kpiCandidates = schema.numeric.filter((c) => !isIdLikeColumn(c));
+  const kpiCols = (kpiCandidates.length ? kpiCandidates : schema.numeric).slice(0, 4);
   const kpis: Kpi[] = kpiCols.map((col) => {
     const nums = rows.map((r) => parseNum(r[col])).filter((n): n is number => n !== null);
     const sum = nums.reduce((s, n) => s + n, 0);
@@ -122,9 +157,10 @@ export function deriveMetrics(
     };
   });
 
+  const realNumeric = schema.numeric.filter((c) => !isIdLikeColumn(c));
   const lineYCol = opts?.lineY && schema.numeric.includes(opts.lineY)
     ? opts.lineY
-    : schema.numeric[0];
+    : realNumeric[0] ?? schema.numeric[0];
   let lineChart: { x: string; y: number; key: number }[] = [];
   if (schema.date && lineYCol) {
     const byDay = new Map<string, { x: string; y: number; key: number }>();
@@ -141,10 +177,16 @@ export function deriveMetrics(
     lineChart = Array.from(byDay.values()).sort((a, b) => a.key - b.key);
   }
 
-  const barXCol = schema.categorical[0];
+  // Restrict insights/bar grouping to low-cardinality categoricals so we
+  // surface broad, actionable patterns rather than per-customer noise.
+  const lowCardCats = schema.categorical.filter((c) => {
+    const u = uniqueCountFast(rows, c, 12);
+    return u >= 2 && u <= 10;
+  });
+  const barXCol = lowCardCats[0] ?? schema.categorical.find((c) => uniqueCountFast(rows, c, 16) <= 15);
   const barYCol = opts?.barY && schema.numeric.includes(opts.barY)
     ? opts.barY
-    : schema.numeric[0];
+    : realNumeric[0] ?? schema.numeric[0];
   let barChart: { x: string; y: number }[] = [];
   if (barXCol && barYCol) {
     const byCat = new Map<string, number>();
