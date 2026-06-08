@@ -14,13 +14,103 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      charts: {
+        Row: {
+          chart_type: string
+          created_at: string
+          id: string
+          workspace_id: string
+          x_axis: string
+          y_axis: string
+        }
+        Insert: {
+          chart_type: string
+          created_at?: string
+          id?: string
+          workspace_id: string
+          x_axis: string
+          y_axis: string
+        }
+        Update: {
+          chart_type?: string
+          created_at?: string
+          id?: string
+          workspace_id?: string
+          x_axis?: string
+          y_axis?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "charts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      datasets: {
+        Row: {
+          created_at: string
+          file_name: string
+          id: string
+          raw_data: Json
+          schema: Json
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          id?: string
+          raw_data: Json
+          schema: Json
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          id?: string
+          raw_data?: Json
+          schema?: Json
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "datasets_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspaces: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      user_owns_workspace: { Args: { _workspace_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

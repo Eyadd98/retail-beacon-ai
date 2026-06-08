@@ -17,8 +17,13 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Papa from "papaparse";
 import { toast } from "sonner";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CustomChartCard, type ChartConfig } from "@/components/custom-chart-card";
+import {
+  loadInitialState, saveDataset, insertChart as dbInsertChart,
+  updateChart as dbUpdateChart, deleteChart as dbDeleteChart,
+  deleteAllCharts, clearWorkspaceData,
+} from "@/lib/dashboard-persistence";
 
 function uniqueCount(rows: RawRow[], col: string, cap = 50): number {
   const set = new Set<string>();
@@ -115,7 +120,24 @@ function Overview() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [charts, setCharts] = useState<ChartConfig[]>([]);
-  const [initializedFor, setInitializedFor] = useState<string | null>(null);
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+
+  // Load saved workspace, dataset, and charts on mount
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const state = await loadInitialState();
+      if (cancelled || !state) return;
+      setWorkspaceId(state.workspaceId);
+      if (state.rows && state.schema) {
+        setRawRows(state.rows);
+        setSchema(state.schema);
+        setCharts(state.charts);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filtered = useMemo(
     () => (rawRows ? applyFilters(rawRows, filters, { dateCol: schema?.date, dateRange }) : []),
@@ -135,31 +157,36 @@ function Overview() {
     });
   }, [schema, rawRows]);
 
-  // Auto-seed default charts the first time a schema becomes available.
-  const schemaKey = schema ? schema.headers.join("|") : null;
-  if (schema && schemaKey !== initializedFor) {
-    setCharts(seedCharts(schema, rawRows ?? []));
-    setInitializedFor(schemaKey);
-  }
-
-  const addChart = () => {
+  const addChart = async () => {
     const x = schema?.date ?? schema?.categorical[0] ?? "";
     const y = schema?.numeric[0] ?? "";
-    setCharts((cs) => [...cs, { id: crypto.randomUUID(), type: "bar", x, y }]);
+    const local: ChartConfig = { id: crypto.randomUUID(), type: "bar", x, y };
+    if (workspaceId) {
+      const saved = await dbInsertChart(workspaceId, local);
+      if (saved) {
+        setCharts((cs) => [...cs, saved]);
+        return;
+      }
+    }
+    setCharts((cs) => [...cs, local]);
   };
-  const updateChart = (id: string, next: ChartConfig) =>
+  const updateChart = (id: string, next: ChartConfig) => {
     setCharts((cs) => cs.map((c) => (c.id === id ? next : c)));
-  const removeChart = (id: string) =>
+    void dbUpdateChart(next);
+  };
+  const removeChart = (id: string) => {
     setCharts((cs) => cs.filter((c) => c.id !== id));
+    void dbDeleteChart(id);
+  };
 
-  const clearData = () => {
+  const clearData = async () => {
     setRawRows(null);
     setSchema(null);
     resetFilters();
     setDateRange(undefined);
     setCharts([]);
-    setInitializedFor(null);
     if (inputRef.current) inputRef.current.value = "";
+    if (workspaceId) await clearWorkspaceData(workspaceId);
     toast.success("Cleared all data");
   };
 
@@ -183,9 +210,23 @@ function Overview() {
             toast.error("No valid rows found in CSV");
             return;
           }
+          const inferred = inferSchema(raw);
           setRawRows(raw);
-          setSchema(inferSchema(raw));
+          setSchema(inferred);
           toast.success(`Processed ${raw.length} rows from ${file.name}`);
+          // Persist dataset + seed + save charts
+          (async () => {
+            if (!workspaceId) return;
+            await saveDataset(workspaceId, file.name, raw, inferred);
+            await deleteAllCharts(workspaceId);
+            const seeded = seedCharts(inferred, raw);
+            const persisted: ChartConfig[] = [];
+            for (const c of seeded) {
+              const saved = await dbInsertChart(workspaceId, c);
+              if (saved) persisted.push(saved);
+            }
+            setCharts(persisted);
+          })();
         } catch (e) {
           console.error("[CSV] failed to process:", e);
           toast.error("Failed to parse CSV");
