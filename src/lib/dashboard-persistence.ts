@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { RawRow, Schema } from "@/lib/dashboard-store";
 import type { ChartConfig, ChartType } from "@/components/custom-chart-card";
+import type { Json } from "@/integrations/supabase/types";
 
 export async function getOrCreateWorkspace(): Promise<string | null> {
   const { data: { user } } = await supabase.auth.getUser();
@@ -71,8 +72,8 @@ export async function saveDataset(
   const { error } = await supabase.from("datasets").insert({
     workspace_id: workspaceId,
     file_name: fileName,
-    raw_data: rows as unknown as object,
-    schema: schema as unknown as object,
+    raw_data: rows as unknown as Json,
+    schema: schema as unknown as Json,
   });
   if (error) console.error("[dataset] save failed", error);
 }
