@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { Bell, Search, CalendarIcon } from "lucide-react";
@@ -12,8 +12,14 @@ import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { DashboardProvider, useDashboardData } from "@/lib/dashboard-store";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/dashboard")({
+  ssr: false,
+  beforeLoad: async () => {
+    const { data } = await supabase.auth.getUser();
+    if (!data.user) throw redirect({ to: "/login" });
+  },
   head: () => ({ meta: [{ title: "Dashboard — AI Data Analyst Dashboard" }] }),
   component: DashboardLayout,
 });
